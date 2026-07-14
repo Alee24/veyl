@@ -47,8 +47,8 @@ dependencies:
   uuid: ^4.3.3
   
   # Push Notifications
-  firebase_core: ^4.12.0
-  firebase_messaging: ^16.4.2
+  firebase_core: ^2.32.0
+  firebase_messaging: ^14.9.0
 
 dev_dependencies:
   flutter_test:
