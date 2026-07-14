@@ -56,7 +56,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               const SizedBox(height: 24),
               const Text(
-                'Welcome to\nLinku',
+                'Welcome to\nVEYL',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 32,
