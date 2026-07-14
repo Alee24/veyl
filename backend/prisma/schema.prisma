@@ -1,0 +1,160 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String   @id @default(uuid())
+  username        String   @unique
+  passwordHash    String?  // Nullable for guest accounts that might not have a password
+  displayName     String
+  bio             String?
+  status          String?  // e.g., "Online", "Busy", "Away"
+  availability    String?  // Custom availability text
+  qrCode          String   @unique // Unique string for QR generation / deep link
+  profilePhotoUrl String?
+  isGuest         Boolean  @default(false)
+  guestExpiresAt  DateTime?
+
+  // Privacy Settings embedded or separate, for now embedded
+  hideOnlineStatus Boolean @default(false)
+  hideLastSeen     Boolean @default(false)
+  hideProfilePhoto Boolean @default(false)
+  hideReadReceipts Boolean @default(false)
+  disableGuestChat Boolean @default(false)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  sessions           Session[]
+  sentMessages       Message[]         @relation("Sender")
+  chatParticipants   ChatParticipant[]
+  blockedUsers       BlockedUser[]     @relation("Blocker")
+  blockedBy          BlockedUser[]     @relation("Blocked")
+  initiatedCalls     Call[]            @relation("Caller")
+  receivedCalls      Call[]            @relation("Receiver")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshToken String   @unique
+  deviceId     String?
+  ipAddress    String?
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+}
+
+model Chat {
+  id        String   @id @default(uuid())
+  type      ChatType @default(DIRECT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  participants ChatParticipant[]
+  messages     Message[]
+}
+
+enum ChatType {
+  DIRECT
+  GROUP
+}
+
+model ChatParticipant {
+  id        String   @id @default(uuid())
+  chatId    String
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      ParticipantRole @default(MEMBER)
+  joinedAt  DateTime @default(now())
+
+  @@unique([chatId, userId])
+}
+
+enum ParticipantRole {
+  MEMBER
+  ADMIN
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  chatId    String
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User     @relation("Sender", fields: [senderId], references: [id], onDelete: Cascade)
+  
+  content   String?
+  type      MessageType @default(TEXT)
+  fileUrl   String?
+  fileName  String?
+  fileSize  Int?
+
+  replyToId String?
+  replyTo   Message?  @relation("Replies", fields: [replyToId], references: [id])
+  replies   Message[] @relation("Replies")
+
+  isEdited  Boolean  @default(false)
+  isDeleted Boolean  @default(false) // Soft delete locally/everyone based on logic
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  status    MessageStatus @default(SENT)
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  FILE
+  VOICE_NOTE
+}
+
+enum MessageStatus {
+  SENT
+  DELIVERED
+  READ
+}
+
+model BlockedUser {
+  id        String   @id @default(uuid())
+  blockerId String
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId String
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+}
+
+model Call {
+  id        String   @id @default(uuid())
+  callerId  String
+  caller    User     @relation("Caller", fields: [callerId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver  User     @relation("Receiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  type      CallType
+  status    CallStatus
+  startedAt DateTime @default(now())
+  endedAt   DateTime?
+  duration  Int?     // in seconds
+}
+
+enum CallType {
+  VOICE
+  VIDEO
+}
+
+enum CallStatus {
+  MISSED
+  ANSWERED
+  REJECTED
+  ONGOING
+}

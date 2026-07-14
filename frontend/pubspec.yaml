@@ -1,0 +1,77 @@
+name: veyl
+description: A privacy-first communication platform where users communicate using usernames and QR codes instead of phone numbers.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  
+  # State Management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.3.5
+  
+  # Routing
+  go_router: ^17.3.0
+  
+  # Networking
+  dio: ^5.4.0
+  socket_io_client: ^3.1.6
+  
+  # Storage
+  flutter_secure_storage: ^10.3.1
+  shared_preferences: ^2.2.2
+  
+  # QR Code
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^7.2.0
+  
+  # UI & Styling
+  google_fonts: ^8.1.0
+  cached_network_image: ^3.3.0
+  shimmer: ^3.0.0
+  
+  # Media & Files
+  file_picker: ^8.1.2
+  image_picker: ^1.0.5
+  
+  # Video Calling (Jitsi)
+  url_launcher: ^6.3.0
+  # jitsi_meet_wrapper: ^0.0.8
+  # flutter_callkit_incoming: ^1.0.3+1
+  uuid: ^4.3.3
+  
+  # Push Notifications
+  firebase_core: ^4.12.0
+  firebase_messaging: ^16.4.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.7
+  riverpod_generator: ^2.3.9
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.0
+  # custom_lint: ^0.5.7
+  # riverpod_lint: ^2.3.9
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+
+flutter_native_splash:
+  color: "#0F111A"
+  image: "assets/icon/splash_screen.png"
+  android_12:
+    color: "#0F111A"
+    image: "assets/icon/splash_screen.png"
+
+flutter:
+  uses-material-design: true

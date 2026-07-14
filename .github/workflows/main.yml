@@ -1,0 +1,38 @@
+name: VEYL CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  backend-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Use Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - run: npm ci
+        working-directory: ./backend
+      - run: npm run build
+        working-directory: ./backend
+      - run: npm run test
+        working-directory: ./backend
+
+  flutter-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+      - run: flutter pub get
+        working-directory: ./frontend
+      - run: flutter analyze
+        working-directory: ./frontend
+      - run: flutter test
+        working-directory: ./frontend
