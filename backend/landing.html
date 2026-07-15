@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veyl | Secure Encryption, Calling & Chatting App</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #0B0C10;
+      --card-bg: #16171F;
+      --primary: #5D3FD3;
+      --primary-hover: #4B32B3;
+      --text: #F3F4F6;
+      --text-muted: #9CA3AF;
+      --accent: #10B981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text);
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    /* Header */
+    header {
+      padding: 24px 8%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: absolute;
+      width: 100%;
+      top: 0;
+      left: 0;
+      z-index: 100;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-img {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(93, 63, 211, 0.4);
+    }
+
+    .logo-text {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      background: linear-gradient(135deg, #FFF, var(--primary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    nav {
+      display: flex;
+      gap: 32px;
+      align-items: center;
+    }
+
+    nav a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.3s;
+    }
+
+    nav a:hover {
+      color: var(--text);
+    }
+
+    .btn-web {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 10px 24px;
+      border-radius: 30px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .btn-web:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Hero Section */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 120px 8% 60px 8%;
+      position: relative;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(93, 63, 211, 0.15) 0%, transparent 70%);
+      top: 10%;
+      right: 10%;
+      z-index: -1;
+    }
+
+    .hero-content {
+      max-width: 600px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(93, 63, 211, 0.1);
+      border: 1px solid rgba(93, 63, 211, 0.2);
+      border-radius: 30px;
+      color: #A78BFA;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      background-color: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--accent);
+    }
+
+    .hero h1 {
+      font-size: 56px;
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: 24px;
+      letter-spacing: -1px;
+    }
+
+    .hero h1 span {
+      background: linear-gradient(135deg, #FFF 30%, #A78BFA);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      font-size: 18px;
+      color: var(--text-muted);
+      margin-bottom: 40px;
+      max-width: 500px;
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      padding: 16px 36px;
+      border-radius: 30px;
+      font-weight: 700;
+      text-decoration: none;
+      box-shadow: 0 10px 20px rgba(93, 63, 211, 0.3);
+      transition: all 0.3s;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px rgba(93, 63, 211, 0.4);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 16px 36px;
+      border-radius: 30px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.3s;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .hero-mockup {
+      width: 400px;
+      height: 650px;
+      background: #111;
+      border: 12px solid #222;
+      border-radius: 48px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5), 0 0 40px rgba(93, 63, 211, 0.1);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .mockup-inner {
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at top, #161825, #0B0C10);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .mockup-logo {
+      width: 90px;
+      height: 90px;
+      border-radius: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 10px 30px rgba(93, 63, 211, 0.3);
+    }
+
+    .mockup-title {
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    .mockup-tagline {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 48px;
+      max-width: 250px;
+    }
+
+    .mockup-interface {
+      width: 100%;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 16px;
+      padding: 16px;
+      text-align: left;
+    }
+
+    .mockup-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .mockup-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .mockup-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background-color: var(--primary);
+    }
+
+    .mockup-bar {
+      height: 8px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      width: 120px;
+    }
+
+    .mockup-bar.short {
+      width: 80px;
+      margin-top: 6px;
+      background: rgba(255,255,255,0.05);
+    }
+
+    /* Features Section */
+    .features {
+      padding: 120px 8%;
+      background: radial-gradient(circle at bottom, rgba(93, 63, 211, 0.05) 0%, transparent 60%);
+      position: relative;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 80px;
+    }
+
+    .section-header h2 {
+      font-size: 40px;
+      font-weight: 800;
+      margin-bottom: 16px;
+    }
+
+    .section-header p {
+      color: var(--text-muted);
+      font-size: 18px;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 32px;
+    }
+
+    .feature-card {
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      padding: 40px 32px;
+      border-radius: 24px;
+      transition: all 0.3s;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(93, 63, 211, 0.25);
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    }
+
+    .feature-icon {
+      width: 56px;
+      height: 56px;
+      background: rgba(93, 63, 211, 0.1);
+      color: #A78BFA;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-bottom: 28px;
+    }
+
+    .feature-card h3 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .feature-card p {
+      color: var(--text-muted);
+      font-size: 15px;
+    }
+
+    /* Footer */
+    footer {
+      padding: 60px 8%;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 24px;
+    }
+
+    footer p {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 32px;
+    }
+
+    .footer-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.3s;
+    }
+
+    .footer-links a:hover {
+      color: var(--text);
+    }
+
+    @media (max-width: 968px) {
+      .hero {
+        flex-direction: column;
+        padding-top: 160px;
+        text-align: center;
+        gap: 60px;
+      }
+      .hero-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .hero-mockup {
+        width: 340px;
+        height: 550px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <img src="app_icon.png" alt="Veyl Logo" class="logo-img" onerror="this.src='favicon.png'">
+      <span class="logo-text">VEYL</span>
+    </div>
+    <nav>
+      <a href="#features">Features</a>
+      <a href="/VEYL-release.apk" class="btn-web">Download APK</a>
+      <a href="/app.html" class="btn-web">Launch Web App</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div class="hero-content">
+      <div class="badge">
+        <span class="badge-dot"></span>
+        End-to-End Encrypted Calling
+      </div>
+      <h1>Secure Chats & <span>Crystal Clear Calls</span></h1>
+      <p>Communicate freely with ultimate privacy. Start secure internet calls, share rich media attachments, and link up instantly using encrypted QR technology.</p>
+      <div class="cta-buttons">
+        <a href="/VEYL-release.apk" class="btn-primary">Download Android APK</a>
+        <a href="/app.html" class="btn-secondary">Launch Web App</a>
+      </div>
+    </div>
+
+    <div class="hero-mockup">
+      <div class="mockup-inner">
+        <img src="app_icon.png" alt="Veyl Logo" class="mockup-logo" onerror="this.src='favicon.png'">
+        <h2 class="mockup-title">Veyl</h2>
+        <p class="mockup-tagline">Encrypted Peer-to-Peer Calling & Messaging</p>
+        <div class="mockup-interface">
+          <div class="mockup-row">
+            <div class="mockup-avatar" style="background-color: #5D3FD3;"></div>
+            <div>
+              <div class="mockup-bar"></div>
+              <div class="mockup-bar short"></div>
+            </div>
+          </div>
+          <div class="mockup-row">
+            <div class="mockup-avatar" style="background-color: #10B981;"></div>
+            <div>
+              <div class="mockup-bar" style="width: 140px;"></div>
+              <div class="mockup-bar short"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <div class="section-header">
+      <h2>Private. Encrypted. Free.</h2>
+      <p>Advanced communication tailored to secure your data identity.</p>
+    </div>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🛡️</div>
+        <h3>End-to-End Encryption</h3>
+        <p>All chats, messages, and calls are encrypted peer-to-peer. Your private identity belongs to you.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📞</div>
+        <h3>HD Audio & Video Calling</h3>
+        <p>Low latency, crystal-clear voice and video calls powered by peer connection protocols.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔗</div>
+        <h3>QR Identity Exchange</h3>
+        <p>Instantly establish new secure connections simply by scanning QR codes, bypassing telephone lookup restrictions.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>&copy; 2026 VEYL. All rights reserved.</p>
+    <div class="footer-links">
+      <a href="/app.html">Web App Client</a>
+      <a href="/VEYL-release.apk">Download Client</a>
+    </div>
+  </footer>
+
+</body>
+</html>

@@ -148,6 +148,38 @@ class ProfileScreen extends ConsumerWidget {
             _buildSettingsTile(context, Icons.edit_outlined, 'Edit Profile', () {}),
             _buildSettingsTile(context, Icons.lock_outline, 'Privacy & Security', () => context.push('/settings')),
             _buildSettingsTile(context, Icons.devices, 'Linked Devices', () {}),
+            _buildSettingsTile(
+              context,
+              Icons.logout,
+              'Log out',
+              () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    backgroundColor: const Color(0xFF161825),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    title: const Text('Log out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    content: const Text('Are you sure you want to log out?', style: TextStyle(color: Colors.white70)),
+                    actions: [
+                      TextButton(
+                        child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                        onPressed: () => Navigator.pop(context, false),
+                      ),
+                      TextButton(
+                        child: const Text('Log out', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                        onPressed: () => Navigator.pop(context, true),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm == true) {
+                  await ref.read(authProvider).logout();
+                  if (context.mounted) {
+                    context.go('/login');
+                  }
+                }
+              },
+            ),
           ],
         ),
       ),

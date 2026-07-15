@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:file_picker/file_picker.dart';
+import '../../../core/api_client.dart';
 import '../../calling/call_service.dart';
 import '../../auth/auth_provider.dart';
 import '../chat_provider.dart';
@@ -16,6 +18,7 @@ class ChatScreen extends ConsumerStatefulWidget {
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
+  bool _showEmojis = false;
 
   @override
   void dispose() {
@@ -29,6 +32,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (text.isEmpty) return;
     ref.read(messagesProvider(widget.chatId).notifier).sendMessage(text);
     _messageController.clear();
+    setState(() {
+      _showEmojis = false;
+    });
     // Scroll to bottom
     Future.delayed(const Duration(milliseconds: 100), () {
       if (_scrollController.hasClients) {
@@ -39,6 +45,37 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         );
       }
     });
+  }
+
+  void _pickAndSendFile() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+        allowMultiple: false,
+      );
+      if (result != null && result.files.single.path != null) {
+        final filePath = result.files.single.path!;
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Uploading attachment...')),
+        );
+        await ref.read(chatProvider).sendFile(widget.chatId, filePath);
+        ref.invalidate(messagesProvider(widget.chatId));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to send file: $e')),
+      );
+    }
+  }
+
+  void _insertEmoji(String emoji) {
+    final text = _messageController.text;
+    final selection = _messageController.selection;
+    final newText = text.replaceRange(selection.start, selection.end, emoji);
+    _messageController.text = newText;
+    _messageController.selection = TextSelection.collapsed(offset: selection.start + emoji.length);
   }
 
   String _formatMessageTime(String createdAtString) {
@@ -64,7 +101,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final currentUserId = profileAsync.value?['userId'] ?? '';
     final currentUsername = profileAsync.value?['username'] ?? 'Guest';
     
-    // Dynamically set names and avatars based on chatId
     String displayName = widget.chatId;
     String avatarUrl = 'https://i.pravatar.cc/150?u=default';
 
@@ -81,10 +117,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       displayName = 'Project Galaxy';
       avatarUrl = 'https://i.pravatar.cc/150?u=4';
     } else {
-      // Title case
       displayName = widget.chatId.split('-').map((word) => word.isNotEmpty ? '${word[0].toUpperCase()}${word.substring(1)}' : '').join(' ');
       avatarUrl = 'https://i.pravatar.cc/150?u=${widget.chatId}';
     }
+
+    final commonEmojis = ['😀', '😂', '👍', '❤️', '🔥', '🙌', '🎉', '😎', '😢', '😮', '🙏', '✨'];
 
     return Scaffold(
       appBar: AppBar(
@@ -156,7 +193,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       )
                     : ListView.builder(
                         controller: _scrollController,
-                        reverse: true, // Messages load newest-first for chat look
+                        reverse: true,
                         padding: const EdgeInsets.all(16),
                         itemCount: messagesState.messages.length,
                         itemBuilder: (context, index) {
@@ -177,6 +214,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       ),
           ),
           
+          // Quick Emojis Selection Row
+          if (_showEmojis)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              color: theme.cardColor,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: commonEmojis.map((emoji) => GestureDetector(
+                  onTap: () => _insertEmoji(emoji),
+                  child: Text(emoji, style: const TextStyle(fontSize: 24)),
+                )).toList(),
+              ),
+            ),
+          
           // Input Area
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -188,7 +239,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               children: [
                 IconButton(
                   icon: const Icon(Icons.add, color: Colors.grey),
-                  onPressed: () {},
+                  onPressed: _pickAndSendFile,
                 ),
                 Expanded(
                   child: TextField(
@@ -203,8 +254,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.emoji_emotions_outlined, color: Colors.grey),
-                  onPressed: () {},
+                  icon: Icon(
+                    _showEmojis ? Icons.keyboard : Icons.emoji_emotions_outlined,
+                    color: Colors.grey,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _showEmojis = !_showEmojis;
+                    });
+                  },
                 ),
                 IconButton(
                   icon: Icon(Icons.send, color: theme.colorScheme.primary),
@@ -220,6 +278,89 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   Widget _buildMessageBubble(BuildContext context, String text, String time, bool isMe, {bool isRead = false}) {
     final theme = Theme.of(context);
+    final isFile = text.startsWith('/uploads/');
+    
+    Widget contentWidget;
+    if (isFile) {
+      final fileUrl = '${getBaseUrl()}$text';
+      final fileName = text.substring(text.lastIndexOf('/') + 1);
+      final extension = text.split('.').last.toLowerCase();
+      
+      final isImage = ['png', 'jpg', 'jpeg', 'gif', 'webp'].contains(extension);
+      final isVideo = ['mp4', 'mov', 'avi', 'mkv'].contains(extension);
+      
+      if (isImage) {
+        contentWidget = ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.network(
+            fileUrl,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, progress) {
+              if (progress == null) return child;
+              return const SizedBox(
+                width: 150,
+                height: 150,
+                child: Center(child: CircularProgressIndicator()),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) => const Text('[Image failed to load]'),
+          ),
+        );
+      } else if (isVideo) {
+        contentWidget = Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.black26,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.play_circle_fill, color: Colors.white, size: 36),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  fileName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
+        );
+      } else {
+        // General File
+        contentWidget = Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isMe ? Colors.black12 : Colors.white10,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.insert_drive_file, color: Colors.grey, size: 32),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  fileName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: isMe ? Colors.white : theme.colorScheme.onBackground),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+    } else {
+      contentWidget = Text(
+        text,
+        style: TextStyle(color: isMe ? Colors.white : theme.colorScheme.onBackground),
+      );
+    }
+
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -238,10 +379,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              text,
-              style: TextStyle(color: isMe ? Colors.white : theme.colorScheme.onBackground),
-            ),
+            contentWidget,
             const SizedBox(height: 4),
             Row(
               mainAxisSize: MainAxisSize.min,

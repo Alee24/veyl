@@ -1,4 +1,4 @@
-import { Controller, Post, Get, UseGuards, Request, Param, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, UseGuards, Request, Param, UseInterceptors, UploadedFile, BadRequestException, Body } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -26,10 +26,23 @@ export class ChatController {
     return this.chatService.getChatHistory(chatId);
   }
 
+  @Post(':chatId/message')
+  async sendMessage(
+    @Request() req: any,
+    @Param('chatId') chatId: string,
+    @Body('content') content: string,
+    @Body('type') type?: any
+  ) {
+    if (!content) {
+      throw new BadRequestException('Content is required');
+    }
+    return this.chatService.saveMessage(chatId, req.user.userId, content, type);
+  }
+
   @Post('upload')
   @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
-      destination: './uploads',
+      destination: './public/uploads',
       filename: (req, file, cb) => {
         const uniqueSuffix = randomUUID() + extname(file.originalname);
         cb(null, uniqueSuffix);

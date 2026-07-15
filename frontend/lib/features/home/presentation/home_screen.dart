@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme.dart';
 import '../../auth/auth_provider.dart';
 import '../../calling/call_service.dart';
+import '../../chat/chat_provider.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -16,6 +17,8 @@ class HomeScreen extends ConsumerWidget {
     final profileAsync = ref.watch(userProfileProvider);
     final username = profileAsync.value?['username'] ?? 'Guest';
     final displayName = profileAsync.value?['displayName'] ?? 'Guest User';
+    final currentUserId = profileAsync.value?['userId'] ?? '';
+    final chatsAsync = ref.watch(userChatsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -273,11 +276,68 @@ class HomeScreen extends ConsumerWidget {
               ],
             ),
 
-            // Recent Chats List
-            _buildChatTile(context, 'Sarah Johnson', 'Typing...', '9:41 AM', 2, 'https://i.pravatar.cc/150?u=1'),
-            _buildChatTile(context, 'Design Team', 'Alex: Here\'s the update', '9:33 AM', 5, 'https://i.pravatar.cc/150?u=2'),
-            _buildChatTile(context, 'Mike Williams', 'Voice message', 'Yesterday', 0, 'https://i.pravatar.cc/150?u=3', isVoice: true),
-            _buildChatTile(context, 'Project Galaxy', 'Lisa: Great work everyone!', 'Yesterday', 0, 'https://i.pravatar.cc/150?u=4'),
+            // Recent Chats List (Exposes real chats, handles empty placeholder)
+            chatsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => const Text('Failed to load recent chats', style: TextStyle(color: Colors.grey)),
+              data: (chats) {
+                if (chats.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24.0),
+                    child: Center(
+                      child: Text(
+                        'No recent chats yet.',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                  );
+                }
+                
+                final recentChats = chats.take(4).toList();
+                
+                return Column(
+                  children: recentChats.map((chat) {
+                    final participants = chat['participants'] as List<dynamic>;
+                    final otherParticipant = participants.firstWhere(
+                      (p) => p['userId'] != currentUserId,
+                      orElse: () => null,
+                    );
+                    if (otherParticipant == null) return const SizedBox.shrink();
+                    
+                    final otherUser = otherParticipant['user'];
+                    final String otherUsername = otherUser['username'] ?? 'User';
+                    final String otherDisplayName = otherUser['displayName'] ?? otherUsername;
+                    
+                    final messages = chat['messages'] as List<dynamic>?;
+                    final lastMsg = messages != null && messages.isNotEmpty ? messages[0] : null;
+                    final String lastMessageText = lastMsg?['content'] ?? 'No messages yet';
+                    
+                    String formatTime(String? dateStr) {
+                      if (dateStr == null) return '';
+                      try {
+                        final date = DateTime.parse(dateStr).toLocal();
+                        final hour = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
+                        final minute = date.minute.toString().padLeft(2, '0');
+                        final period = date.hour >= 12 ? 'PM' : 'AM';
+                        return '$hour:$minute $period';
+                      } catch (_) {
+                        return '';
+                      }
+                    }
+                    
+                    return _buildChatTile(
+                      context,
+                      otherDisplayName,
+                      lastMessageText,
+                      formatTime(lastMsg?['createdAt']),
+                      0,
+                      'https://i.pravatar.cc/150?u=$otherUsername',
+                      onTap: () => context.push('/chat/${chat['id']}'),
+                    );
+                  }).toList(),
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -320,11 +380,12 @@ class HomeScreen extends ConsumerWidget {
     int unread,
     String avatarUrl, {
     bool isVoice = false,
+    required VoidCallback onTap,
   }) {
     final theme = Theme.of(context);
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      onTap: () => context.go('/chats'),
+      onTap: onTap,
       leading: CircleAvatar(
         backgroundImage: NetworkImage(avatarUrl),
       ),

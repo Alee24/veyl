@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'core/router.dart';
 import 'core/theme.dart';
-
-import 'package:firebase_core/firebase_core.dart';
+import 'features/auth/auth_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,9 +13,22 @@ void main() async {
   } catch (e) {
     debugPrint('Firebase initialization failed: $e');
   }
+
+  // Pre-check authentication status to keep user logged in
+  String? token;
+  try {
+    const storage = FlutterSecureStorage();
+    token = await storage.read(key: 'accessToken');
+  } catch (e) {
+    debugPrint('Secure storage read failed: $e');
+  }
+
   runApp(
-    const ProviderScope(
-      child: VeylApp(),
+    ProviderScope(
+      overrides: [
+        if (token != null) authStateProvider.overrideWith((ref) => true),
+      ],
+      child: const VeylApp(),
     ),
   );
 }

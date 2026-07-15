@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "887814449677",
+    "project_id": "veyl-1b1e8",
+    "storage_bucket": "veyl-1b1e8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:887814449677:android:0232bba6f9161f71580344",
+        "android_client_info": {
+          "package_name": "com.veylkkdes.com"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBX9KYWxLbiF6jjFAHebmJQRX_SDDThPGE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

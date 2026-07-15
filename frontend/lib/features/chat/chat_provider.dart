@@ -52,6 +52,13 @@ class ChatRepository {
     }
   }
 
+  Future<Response> postMessage(String chatId, String content, String type) async {
+    return _dio.post('/chat/$chatId/message', data: {
+      'content': content,
+      'type': type,
+    });
+  }
+
   Future<void> sendFile(String chatId, String filePath) async {
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(filePath),
@@ -59,6 +66,9 @@ class ChatRepository {
 
     final response = await _dio.post('/chat/upload', data: formData);
     final fileUrl = response.data['url'];
+    // Deliver via REST first
+    await postMessage(chatId, fileUrl, 'FILE');
+    // Notify socket if connected
     _socketService.sendMessage(chatId, fileUrl, 'FILE');
   }
 }
@@ -94,17 +104,55 @@ class MessagesNotifier extends StateNotifier<MessagesState> {
     _messageSubscription = _socketService.onMessage.listen((msg) {
       // Backend message structure includes chatId
       if (msg['chatId'] == _chatId) {
-        state = MessagesState(
-          messages: [msg, ...state.messages],
-          isLoading: false,
-        );
+        // Prevent duplicate messages if already inserted optimistically
+        final exists = state.messages.any((m) => m['id'] == msg['id']);
+        if (!exists) {
+          state = MessagesState(
+            messages: [msg, ...state.messages],
+            isLoading: false,
+          );
+        }
       }
     });
   }
 
-  void sendMessage(String content) {
+  void sendMessage(String content, {String type = 'TEXT'}) async {
     if (content.trim().isEmpty) return;
-    _socketService.sendMessage(_chatId, content, 'TEXT');
+
+    final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+    final tempMsg = {
+      'id': tempId,
+      'chatId': _chatId,
+      'content': content,
+      'type': type,
+      'createdAt': DateTime.now().toIso8601String(),
+      'status': 'SENT',
+    };
+
+    // Optimistically add to UI state
+    state = MessagesState(
+      messages: [tempMsg, ...state.messages],
+      isLoading: false,
+    );
+
+    try {
+      final response = await _chatRepository.postMessage(_chatId, content, type);
+      final actualMsg = response.data;
+      
+      // Update with database message
+      state = MessagesState(
+        messages: state.messages.map((m) => m['id'] == tempId ? actualMsg : m).toList(),
+        isLoading: false,
+      );
+
+      // Broadcast over Socket
+      _socketService.sendMessage(_chatId, content, type);
+    } catch (e) {
+      state = MessagesState(
+        messages: state.messages.map((m) => m['id'] == tempId ? {...m, 'status': 'FAILED'} : m).toList(),
+        isLoading: false,
+      );
+    }
   }
 
   @override
