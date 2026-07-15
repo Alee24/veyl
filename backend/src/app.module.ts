@@ -16,7 +16,6 @@ import { ChatModule } from './chat/chat.module';
     ChatModule,
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'public'),
-      exclude: ['/api/(.*)'],
     }),
   ],
   controllers: [AppController],
