@@ -17,9 +17,26 @@ class SocketService {
   final StreamController<Map<String, dynamic>> _typingController = StreamController.broadcast();
   Stream<Map<String, dynamic>> get onTyping => _typingController.stream;
 
+  // Call Signaling Streams
+  final StreamController<Map<String, dynamic>> _callIncomingController = StreamController.broadcast();
+  Stream<Map<String, dynamic>> get onCallIncoming => _callIncomingController.stream;
+
+  final StreamController<Map<String, dynamic>> _callAcceptedController = StreamController.broadcast();
+  Stream<Map<String, dynamic>> get onCallAccepted => _callAcceptedController.stream;
+
+  final StreamController<Map<String, dynamic>> _callDeclinedController = StreamController.broadcast();
+  Stream<Map<String, dynamic>> get onCallDeclined => _callDeclinedController.stream;
+
+  final StreamController<Map<String, dynamic>> _callCancelledController = StreamController.broadcast();
+  Stream<Map<String, dynamic>> get onCallCancelled => _callCancelledController.stream;
+
   SocketService(this._ref);
 
+  IO.Socket? get socket => _socket;
+
   Future<void> connect() async {
+    if (_socket != null && _socket!.connected) return;
+
     final storage = _ref.read(secureStorageProvider);
     final token = await storage.read(key: 'accessToken');
 
@@ -43,6 +60,23 @@ class SocketService {
     _socket!.on('user_typing', (data) {
       _typingController.add(data);
     });
+
+    // Call Signaling listeners
+    _socket!.on('call_incoming', (data) {
+      _callIncomingController.add(Map<String, dynamic>.from(data));
+    });
+
+    _socket!.on('call_accepted', (data) {
+      _callAcceptedController.add(Map<String, dynamic>.from(data));
+    });
+
+    _socket!.on('call_declined', (data) {
+      _callDeclinedController.add(Map<String, dynamic>.from(data));
+    });
+
+    _socket!.on('call_cancelled', (data) {
+      _callCancelledController.add(Map<String, dynamic>.from(data));
+    });
   }
 
   void joinChat(String chatId) {
@@ -65,6 +99,39 @@ class SocketService {
     _socket?.emit('typing', {
       'chatId': chatId,
       'isTyping': isTyping,
+    });
+  }
+
+  // Call Signaling Emits
+  void makeCall({
+    required String targetUserId,
+    required String roomName,
+    required String callerName,
+    required String callerUsername,
+  }) {
+    _socket?.emit('make_call', {
+      'targetUserId': targetUserId,
+      'roomName': roomName,
+      'callerName': callerName,
+      'callerUsername': callerUsername,
+    });
+  }
+
+  void acceptCall(String callerId) {
+    _socket?.emit('accept_call', {
+      'callerId': callerId,
+    });
+  }
+
+  void declineCall(String callerId) {
+    _socket?.emit('decline_call', {
+      'callerId': callerId,
+    });
+  }
+
+  void cancelCall(String targetUserId) {
+    _socket?.emit('cancel_call', {
+      'targetUserId': targetUserId,
     });
   }
 

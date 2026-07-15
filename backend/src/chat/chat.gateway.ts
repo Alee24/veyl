@@ -85,4 +85,47 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const message = await this.chatService.updateMessageStatus(payload.messageId, payload.status);
     client.to(`chat_${payload.chatId}`).emit('message_status_update', { messageId: message.id, status: message.status });
   }
+
+  @SubscribeMessage('make_call')
+  handleMakeCall(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { targetUserId: string; roomName: string; callerName: string; callerUsername: string }
+  ) {
+    this.server.to(payload.targetUserId).emit('call_incoming', {
+      callerId: client.data.user.sub,
+      callerName: payload.callerName,
+      callerUsername: payload.callerUsername,
+      roomName: payload.roomName,
+    });
+  }
+
+  @SubscribeMessage('accept_call')
+  handleAcceptCall(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { callerId: string }
+  ) {
+    this.server.to(payload.callerId).emit('call_accepted', {
+      calleeId: client.data.user.sub,
+    });
+  }
+
+  @SubscribeMessage('decline_call')
+  handleDeclineCall(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { callerId: string }
+  ) {
+    this.server.to(payload.callerId).emit('call_declined', {
+      calleeId: client.data.user.sub,
+    });
+  }
+
+  @SubscribeMessage('cancel_call')
+  handleCancelCall(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { targetUserId: string }
+  ) {
+    this.server.to(payload.targetUserId).emit('call_cancelled', {
+      callerId: client.data.user.sub,
+    });
+  }
 }

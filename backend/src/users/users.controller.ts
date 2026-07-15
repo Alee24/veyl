@@ -31,6 +31,12 @@ export class UsersController {
     return this.usersService.updateProfilePhoto(req.user.userId, photoUrl);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Get()
+  async findAll() {
+    return this.usersService.findAll();
+  }
+
   @Get(':username')
   async findByUsername(@Param('username') username: string) {
     const user = await this.usersService.findByUsername(username);

@@ -1,58 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../call_service.dart';
+import 'package:go_router/go_router.dart';
+import 'package:uuid/uuid.dart';
 import '../../auth/auth_provider.dart';
+import '../../../core/api_client.dart';
+
+final allUsersProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  final dio = ref.read(dioProvider);
+  final response = await dio.get('/users');
+  return response.data as List<dynamic>;
+});
+
+final callSearchQueryProvider = StateProvider.autoDispose<String>((ref) => '');
 
 class CallsScreen extends ConsumerWidget {
   const CallsScreen({super.key});
 
-  void _showAddCallDialog(BuildContext context, WidgetRef ref) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF161825),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('New Call', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          content: TextField(
-            controller: controller,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: 'Enter contact username...',
-              hintStyle: const TextStyle(color: Colors.white38),
-              prefixText: '@ ',
-              prefixStyle: const TextStyle(color: Colors.white54),
-              filled: true,
-              fillColor: Colors.white.withOpacity(0.05),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-              onPressed: () => Navigator.pop(context),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF5D3FD3),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text('Call', style: TextStyle(color: Colors.white)),
-              onPressed: () async {
-                final username = controller.text.trim();
-                if (username.isEmpty) return;
-                Navigator.pop(context);
-                final profileAsync = ref.read(userProfileProvider);
-                final currentUsername = profileAsync.value?['username'] ?? 'Guest';
-                ref.read(callServiceProvider).joinVideoCall('voice-$username', currentUsername, '');
-              },
-            ),
-          ],
-        );
+  void _startCall(BuildContext context, WidgetRef ref, Map<String, dynamic> callee) {
+    final profileAsync = ref.read(userProfileProvider);
+    final currentUserId = profileAsync.value?['userId'] ?? '';
+    final calleeId = callee['id'];
+
+    if (currentUserId.isEmpty || calleeId == null) return;
+
+    // Generate a clean, unique room name for the Jitsi call session
+    final String uniqueRoom = 'call_${const Uuid().v4()}';
+
+    // Push the OutgoingCallScreen route, passing the callee details and room name
+    context.push(
+      '/outgoing_call',
+      extra: {
+        'calleeId': calleeId,
+        'calleeName': callee['displayName'] ?? callee['username'] ?? 'User',
+        'calleeUsername': callee['username'] ?? 'user',
+        'roomName': uniqueRoom,
       },
     );
   }
@@ -60,14 +41,21 @@ class CallsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    final usersAsync = ref.watch(allUsersProvider);
+    final searchQuery = ref.watch(callSearchQueryProvider);
+    final profileAsync = ref.watch(userProfileProvider);
+    final currentUserId = profileAsync.value?['userId'] ?? '';
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Calls', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Directory & Calls', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
-            icon: Icon(Icons.add_call, color: theme.colorScheme.primary),
-            onPressed: () => _showAddCallDialog(context, ref),
+            icon: Icon(Icons.refresh, color: theme.colorScheme.secondary),
+            onPressed: () => ref.refresh(allUsersProvider),
           ),
           const SizedBox(width: 8),
         ],
@@ -78,45 +66,137 @@ class CallsScreen extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: TextField(
-              style: TextStyle(color: theme.colorScheme.onBackground),
+              onChanged: (val) => ref.read(callSearchQueryProvider.notifier).state = val,
+              style: TextStyle(color: isDark ? Colors.white : Colors.black),
               decoration: InputDecoration(
-                hintText: 'Search call history',
-                hintStyle: const TextStyle(color: Colors.grey),
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                filled: true,
-                fillColor: theme.dividerColor.withOpacity(0.05),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
-                ),
+                hintText: 'Search user by username...',
+                prefixIcon: const Icon(Icons.search),
                 contentPadding: const EdgeInsets.symmetric(vertical: 0),
               ),
             ),
           ),
-          
-          // Call Log list
+
+          // User Directory List
           Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.call_end_outlined, size: 64, color: theme.dividerColor.withOpacity(0.2)),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No call logs yet',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onBackground),
-                  ),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                    child: Text(
-                      'Voice and video calls made over the internet will appear here. Start a call directly inside a chat room!',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: theme.disabledColor),
-                    ),
-                  ),
-                ],
+            child: usersAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(
+                child: Text('Failed to load users', style: TextStyle(color: Colors.grey[500])),
               ),
+              data: (users) {
+                // Filter out current user and guests
+                final eligibleUsers = users.where((u) {
+                  final id = u['id'];
+                  final username = (u['username'] ?? '').toString().toLowerCase();
+                  final displayName = (u['displayName'] ?? '').toString().toLowerCase();
+                  final query = searchQuery.toLowerCase();
+                  
+                  return id != currentUserId && 
+                      (username.contains(query) || displayName.contains(query));
+                }).toList();
+
+                if (eligibleUsers.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.people_outline, size: 64, color: theme.dividerColor.withOpacity(0.3)),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No users found',
+                          style: TextStyle(color: Colors.grey[500], fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  itemCount: eligibleUsers.length,
+                  itemBuilder: (context, index) {
+                    final user = eligibleUsers[index];
+                    final String username = user['username'] ?? 'user';
+                    final String displayName = user['displayName'] ?? username;
+                    final String avatarUrl = 'https://i.pravatar.cc/150?u=$username';
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isDark ? Colors.white10 : theme.dividerColor.withOpacity(0.5),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 24,
+                            backgroundImage: NetworkImage(avatarUrl),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  displayName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '@$username',
+                                  style: const TextStyle(color: Colors.grey, fontSize: 13),
+                                ),
+                              ],
+                            ),
+                          ),
+                          
+                          // Call Button
+                          GestureDetector(
+                            onTap: () => _startCall(context, ref, user),
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.secondary.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.call,
+                                color: theme.colorScheme.secondary,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // Video Call Button
+                          GestureDetector(
+                            onTap: () => _startCall(context, ref, user),
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.greenAccent.shade700.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.videocam,
+                                color: Colors.greenAccent.shade700,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
             ),
           ),
         ],

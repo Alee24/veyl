@@ -78,6 +78,21 @@ export class UsersService {
     });
   }
 
+  async findAll() {
+    return this.prisma.user.findMany({
+      where: {
+        isGuest: false, // Only return real users, not expired guest sessions
+      },
+      select: {
+        id: true,
+        username: true,
+        displayName: true,
+        profilePhotoUrl: true,
+        status: true,
+      },
+    });
+  }
+
   async updateProfilePhoto(userId: string, profilePhotoUrl: string) {
     return this.prisma.user.update({
       where: { id: userId },
