@@ -26,12 +26,12 @@ tasks.register<Delete>("clean") {
 subprojects {
     plugins.withId("com.android.library") {
         configure<com.android.build.gradle.LibraryExtension> {
-            compileSdk = 36
+            compileSdkVersion(36)
         }
     }
     plugins.withId("com.android.application") {
         configure<com.android.build.gradle.AppExtension> {
-            compileSdk = 36
+            compileSdkVersion(36)
         }
     }
 }
