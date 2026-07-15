@@ -15,6 +15,8 @@ class MainLayout extends ConsumerStatefulWidget {
 class _MainLayoutState extends ConsumerState<MainLayout> {
   int _currentIndex = 0;
   StreamSubscription? _incomingCallSub;
+  Timer? _connectivityTimer;
+  bool _hasInternet = true;
 
   @override
   void initState() {
@@ -30,12 +32,72 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
           context.push('/incoming_call', extra: data);
         }
       });
+
+      _startConnectivityCheck();
     });
+  }
+
+  void _startConnectivityCheck() {
+    _connectivityTimer = Timer.periodic(const Duration(seconds: 8), (timer) async {
+      try {
+        // Fast ping to verify connection
+        final result = await InternetAddress.lookup('dns.google').timeout(const Duration(seconds: 4));
+        if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
+          if (!_hasInternet && mounted) {
+            setState(() => _hasInternet = true);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('⚡ Internet Restored. Synchronizing conversations...')),
+            );
+          }
+        }
+      } catch (_) {
+        if (_hasInternet && mounted) {
+          setState(() => _hasInternet = false);
+          _showOfflineModePrompt();
+        }
+      }
+    });
+  }
+
+  void _showOfflineModePrompt() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF161E2E),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Row(
+            children: [
+              Icon(Icons.wifi_off, color: Colors.orange.shade400),
+              const SizedBox(width: 12),
+              const Text('No Internet', style: TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: const Text(
+            'Nearby Veyl users detected over local Wi-Fi network. Switch to offline Nearby Mode?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                context.push('/nearby');
+              },
+              child: const Text('Continue'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
   void dispose() {
     _incomingCallSub?.cancel();
+    _connectivityTimer?.cancel();
     super.dispose();
   }
 

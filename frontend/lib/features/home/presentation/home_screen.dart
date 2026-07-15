@@ -1,21 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
 import '../../auth/auth_provider.dart';
 import '../../chat/chat_provider.dart';
 import '../../../core/widgets/veyl_logo.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
-
-  void _shareProfileLink(String username) async {
-    final String link = 'https://veyl.kkdes.co.ke/$username';
-    await Share.share(
-      'Connect with me on Veyl! Scan my QR code or open my link to chat securely: $link',
-      subject: 'Veyl Connection Link',
-    );
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -263,7 +254,7 @@ class HomeScreen extends ConsumerWidget {
                   _buildQuickActionItem(
                     icon: Icons.link,
                     label: 'Invite Link',
-                    onTap: () => _shareProfileLink(username),
+                    onTap: () => context.push('/disposable_links'),
                     theme: theme,
                   ),
                   _buildQuickActionItem(

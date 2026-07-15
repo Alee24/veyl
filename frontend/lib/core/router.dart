@@ -16,6 +16,9 @@ import '../features/calling/presentation/room_screen.dart';
 import '../features/calling/presentation/incoming_call_screen.dart';
 import '../features/calling/presentation/outgoing_call_screen.dart';
 import '../features/contacts/presentation/contacts_screen.dart';
+import '../features/contacts/presentation/disposable_links_screen.dart';
+import '../features/contacts/presentation/claim_link_screen.dart';
+import '../features/nearby/presentation/nearby_screen.dart';
 import 'main_layout.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -71,6 +74,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/disposable_links',
+        builder: (context, state) => const DisposableLinksScreen(),
+      ),
+      GoRoute(
+        path: '/claim/:token',
+        builder: (context, state) => ClaimLinkScreen(token: state.pathParameters['token']!),
+      ),
+      GoRoute(
+        path: '/nearby',
+        builder: (context, state) => const NearbyScreen(),
       ),
       GoRoute(
         path: '/chat/:id',

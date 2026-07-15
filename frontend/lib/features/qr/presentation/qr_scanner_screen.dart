@@ -22,6 +22,18 @@ class _QrScannerScreenState extends ConsumerState<QrScannerScreen> {
       setState(() => _isHandlingScan = true);
       final String code = barcodes.first.rawValue!;
       
+      // Check if temporary invite link
+      if (code.contains('/claim/')) {
+        final parts = code.split('/claim/');
+        if (parts.length > 1) {
+          final token = parts.last;
+          if (mounted) {
+            context.go('/claim/$token');
+            return;
+          }
+        }
+      }
+
       // Parse username from scanned URL: e.g., "https://veyl.kkdes.co.ke/sarah" -> "sarah"
       String contactUsername = code.trim();
       if (contactUsername.contains('://')) {

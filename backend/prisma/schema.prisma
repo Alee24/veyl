@@ -39,6 +39,7 @@ model User {
   initiatedCalls     Call[]            @relation("Caller")
   receivedCalls      Call[]            @relation("Receiver")
   createdRooms       Room[]
+  temporaryLinks     TemporaryLink[]
 }
 
 model Session {
@@ -169,4 +170,30 @@ model Room {
   presenterId  String
   presenter    User      @relation(fields: [presenterId], references: [id], onDelete: Cascade)
   createdAt    DateTime  @default(now())
+}
+
+model TemporaryLink {
+  id              String    @id @default(uuid())
+  ownerId         String
+  owner           User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  secureToken     String    @unique
+  name            String?
+  expiresAt       DateTime?
+  maxScans        Int?
+  currentScans    Int       @default(0)
+  allowedActions  String[]  // e.g. ["chat", "voice_call", "video_call", "file_sharing"]
+  requireApproval Boolean   @default(false)
+  password        String?   // Optional PIN/password hash
+  status          String    @default("ACTIVE") // ACTIVE, EXPIRED, REVOKED
+  createdAt       DateTime  @default(now())
+}
+
+model OfflineQueue {
+  id        String    @id @default(uuid())
+  sender    String
+  receiver  String
+  message   String
+  status    String    @default("PENDING") // PENDING, SYNCED
+  createdAt DateTime  @default(now())
+  syncedAt  DateTime?
 }
