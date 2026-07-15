@@ -14,8 +14,9 @@ class ContactsService implements ContactsServiceInterface {
       properties: {ContactProperty.phone},
     );
     return contacts.map((c) {
+      final name = c.displayName;
       return AppContact(
-        displayName: c.displayName.isNotEmpty ? c.displayName : 'Contact',
+        displayName: (name == null || name.isEmpty) ? 'Contact' : name,
         phones: c.phones.map((p) => p.number).toList(),
       );
     }).toList();
