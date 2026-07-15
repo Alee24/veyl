@@ -20,12 +20,12 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     initialLocation: '/login',
-    // redirect: (context, state) {
-    //   final isLoggingIn = state.matchedLocation == '/login' || state.matchedLocation == '/register';
-    //   if (!authState && !isLoggingIn) return '/login';
-    //   if (authState && isLoggingIn) return '/home';
-    //   return null;
-    // },
+    redirect: (context, state) {
+      final isLoggingIn = state.matchedLocation == '/login' || state.matchedLocation == '/register';
+      if (!authState && !isLoggingIn) return '/login';
+      if (authState && isLoggingIn) return '/home';
+      return null;
+    },
     routes: [
       GoRoute(
         path: '/login',
