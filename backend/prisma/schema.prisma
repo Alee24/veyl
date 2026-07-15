@@ -12,6 +12,7 @@ model User {
   username        String   @unique
   passwordHash    String?  // Nullable for guest accounts that might not have a password
   displayName     String
+  phoneNumber     String?  @unique
   bio             String?
   status          String?  // e.g., "Online", "Busy", "Away"
   availability    String?  // Custom availability text

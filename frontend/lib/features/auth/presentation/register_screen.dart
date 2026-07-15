@@ -13,21 +13,31 @@ class RegisterScreen extends ConsumerStatefulWidget {
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _phoneController = TextEditingController();
   bool _isLoading = false;
   bool _isPasswordVisible = false;
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _phoneController.dispose();
+    super.dispose();
+  }
 
   void _register() async {
     setState(() => _isLoading = true);
     try {
       await ref.read(authProvider).register(
-        _usernameController.text,
+        _usernameController.text.trim(),
         _passwordController.text,
-        _usernameController.text, // Using username as display name initially
+        _usernameController.text.trim(),
+        phoneNumber: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
       );
       if (mounted) context.go('/home');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Registration failed')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Registration failed')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -47,12 +57,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 16),
               const Text(
                 'Create Username',
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black),
@@ -62,11 +71,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 'This will be your unique identity',
                 style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
               
               // Username Input
               TextField(
                 controller: _usernameController,
+                style: const TextStyle(color: Colors.black),
                 decoration: InputDecoration(
                   prefixText: '@ ',
                   prefixStyle: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold),
@@ -79,7 +89,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: Colors.green.shade300), // showing available
+                    borderSide: BorderSide(color: Colors.green.shade300),
                   ),
                 ),
               ),
@@ -87,7 +97,31 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 padding: EdgeInsets.only(top: 8.0, left: 4.0),
                 child: Text('Username is available', style: TextStyle(color: Colors.green, fontSize: 12)),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
+
+              // Phone Number Input
+              const Text('Phone Number (optional)', style: TextStyle(color: Colors.grey, fontSize: 14)),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                style: const TextStyle(color: Colors.black),
+                decoration: InputDecoration(
+                  hintText: '+254 712 345678',
+                  hintStyle: const TextStyle(color: Colors.grey),
+                  filled: true,
+                  fillColor: Colors.grey[50],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
               
               const Text('Suggestions', style: TextStyle(color: Colors.grey, fontSize: 14)),
               const SizedBox(height: 8),
@@ -101,8 +135,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   _buildSuggestionChip('alex07'),
                 ],
               ),
-              
-              const SizedBox(height: 32),
+              const SizedBox(height: 20),
               
               // Password Input
               const Text('Password', style: TextStyle(color: Colors.grey, fontSize: 14)),
@@ -110,6 +143,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               TextField(
                 controller: _passwordController,
                 obscureText: !_isPasswordVisible,
+                style: const TextStyle(color: Colors.black),
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: Colors.grey[50],
@@ -128,34 +162,34 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              Row(
+              const Row(
                 children: [
-                  const Icon(Icons.check, color: Colors.green, size: 16),
-                  const SizedBox(width: 8),
-                  const Text('At least 8 characters', style: TextStyle(color: Colors.green, fontSize: 14)),
+                  Icon(Icons.check, color: Colors.green, size: 16),
+                  SizedBox(width: 8),
+                  Text('At least 8 characters', style: TextStyle(color: Colors.green, fontSize: 14)),
                 ],
               ),
               const SizedBox(height: 4),
-              Row(
+              const Row(
                 children: [
-                  const Icon(Icons.check, color: Colors.green, size: 16),
-                  const SizedBox(width: 8),
-                  const Text('Include number or symbol', style: TextStyle(color: Colors.green, fontSize: 14)),
+                  Icon(Icons.check, color: Colors.green, size: 16),
+                  SizedBox(width: 8),
+                  Text('Include number or symbol', style: TextStyle(color: Colors.green, fontSize: 14)),
                 ],
               ),
               
-              const Spacer(),
+              const SizedBox(height: 32),
               
               ElevatedButton(
                 onPressed: _isLoading ? null : _register,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF5D3FD3), // Primary purple
+                  backgroundColor: const Color(0xFF5D3FD3),
                   padding: const EdgeInsets.symmetric(vertical: 18),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                 ),
                 child: _isLoading 
                     ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white))
-                    : const Text('Create Account', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    : const Text('Create Account', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
               
               const SizedBox(height: 16),
@@ -164,7 +198,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey, fontSize: 12),
               ),
-              const SizedBox(height: 24),
             ],
           ),
         ),

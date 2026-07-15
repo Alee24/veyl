@@ -40,11 +40,12 @@ class AuthRepository {
     _authState.state = true;
   }
 
-  Future<void> register(String username, String password, String displayName) async {
+  Future<void> register(String username, String password, String displayName, {String? phoneNumber}) async {
     final response = await _dio.post('/auth/register', data: {
       'username': username,
       'password': password,
       'displayName': displayName,
+      'phoneNumber': phoneNumber,
     });
     
     await _saveTokens(response.data);

@@ -13,6 +13,7 @@ import '../features/home/presentation/notifications_screen.dart';
 import '../features/calling/presentation/calls_screen.dart';
 import '../features/profile/presentation/settings_screen.dart';
 import '../features/auth/auth_provider.dart';
+import '../features/contacts/presentation/phonebook_screen.dart';
 import 'main_layout.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -46,6 +47,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/scan',
         builder: (context, state) => const QrScannerScreen(),
+      ),
+      GoRoute(
+        path: '/phonebook',
+        builder: (context, state) => const PhonebookScreen(),
       ),
       ShellRoute(
         builder: (context, state, child) => MainLayout(child: child),

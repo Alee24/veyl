@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../call_service.dart';
 import '../../auth/auth_provider.dart';
 
@@ -19,7 +20,7 @@ class CallsScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: Icon(Icons.add_call, color: theme.colorScheme.primary),
-            onPressed: () => callService.joinVideoCall('new-call', currentUsername, ''),
+            onPressed: () => context.push('/phonebook'),
           ),
           const SizedBox(width: 8),
         ],

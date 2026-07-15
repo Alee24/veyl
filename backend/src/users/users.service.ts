@@ -17,6 +17,15 @@ export class UsersService {
       throw new ConflictException('Username is already taken');
     }
 
+    if (createUserDto.phoneNumber) {
+      const existingPhone = await this.prisma.user.findUnique({
+        where: { phoneNumber: createUserDto.phoneNumber },
+      });
+      if (existingPhone) {
+        throw new ConflictException('Phone number is already registered');
+      }
+    }
+
     const passwordHash = await argon2.hash(createUserDto.password);
     const qrCode = randomBytes(16).toString('hex'); // Unique identifier for QR link
 
@@ -26,8 +35,38 @@ export class UsersService {
         passwordHash,
         displayName: createUserDto.displayName,
         bio: createUserDto.bio,
+        phoneNumber: createUserDto.phoneNumber,
         qrCode,
       },
+    });
+  }
+
+  async matchPhoneNumbers(numbers: string[]) {
+    const cleanNumbers = numbers.map(num => num.replace(/\D/g, ''));
+    
+    const allUsers = await this.prisma.user.findMany({
+      where: {
+        phoneNumber: { not: null }
+      },
+      select: {
+        id: true,
+        username: true,
+        displayName: true,
+        phoneNumber: true,
+        profilePhotoUrl: true,
+        status: true
+      }
+    });
+
+    return allUsers.filter(user => {
+      if (!user.phoneNumber) return false;
+      const userClean = user.phoneNumber.replace(/\D/g, '');
+      return cleanNumbers.some(inputClean => {
+        if (inputClean.length >= 9 && userClean.length >= 9) {
+          return inputClean.endsWith(userClean.slice(-9)) || userClean.endsWith(inputClean.slice(-9));
+        }
+        return inputClean === userClean;
+      });
     });
   }
 
