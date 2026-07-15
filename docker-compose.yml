@@ -17,7 +17,7 @@ services:
       - redis
     volumes:
       - ./backend/src:/usr/src/app/src
-      - ./frontend/build/web:/usr/src/app/public
+      - ./backend/public:/usr/src/app/public
 
   postgres:
     image: postgres:15-alpine
