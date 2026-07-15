@@ -3,7 +3,7 @@ import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
-import { FirebaseRegisterDto } from './dto/firebase-register.dto';
+import { RecoverDto } from './dto/recover.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Controller('auth')
@@ -20,20 +20,10 @@ export class AuthController {
     return this.authService.login(user);
   }
 
-  @Post('firebase-register')
-  async firebaseRegister(
-    @Body() dto: FirebaseRegisterDto,
-    @Request() req: any,
-  ) {
-    const deviceId = req.headers['x-device-id'] as string | undefined;
-    const ipAddress = req.ip as string | undefined;
-    return this.authService.firebaseRegister(
-      dto.firebaseToken,
-      dto.username,
-      dto.displayName,
-      deviceId,
-      ipAddress,
-    );
+  @HttpCode(HttpStatus.OK)
+  @Post('recover')
+  async recover(@Body() dto: RecoverDto) {
+    return this.authService.recoverPassword(dto.username, dto.recoveryKey, dto.newPassword);
   }
 
   @HttpCode(HttpStatus.OK)

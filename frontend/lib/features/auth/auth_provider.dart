@@ -1,11 +1,10 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/api_client.dart';
 
 // ---------------------------------------------------------------------------
-// Exception used to surface user-friendly Firebase / backend errors
+// Exception used to surface user-friendly backend validation or network errors
 // ---------------------------------------------------------------------------
 class AuthException implements Exception {
   final String message;
@@ -67,48 +66,24 @@ class AuthRepository {
   AuthRepository(this._dio, this.storage, this._authState);
 
   // -------------------------------------------------------------------------
-  // REGISTER via Firebase Auth + backend
+  // REGISTER (username + password + optional recovery key)
   // -------------------------------------------------------------------------
-  Future<void> registerWithFirebase({
+  Future<void> register({
     required String username,
-    required String email,
     required String password,
+    String? recoveryKey,
   }) async {
-    UserCredential? credential;
     try {
-      // 1. Create Firebase account
-      credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
-      // 2. Get Firebase ID token
-      final idToken = await credential.user!.getIdToken();
-
-      // 3. Register on Veyl backend using the Firebase token
-      final response = await _dio.post('/auth/firebase-register', data: {
-        'firebaseToken': idToken,
+      final response = await _dio.post('/auth/register', data: {
         'username': username,
-        'displayName': username,
+        'password': password,
+        'displayName': username, // Uses username as public display name by default
+        if (recoveryKey != null) 'recoveryKey': recoveryKey,
       });
 
       await _saveTokens(response.data);
       _authState.state = true;
-    } on FirebaseAuthException catch (e) {
-      // If backend fails after Firebase account creation, clean up Firebase
-      if (credential != null) {
-        try {
-          await credential.user?.delete();
-        } catch (_) {}
-      }
-      throw AuthException(_mapFirebaseError(e));
     } on DioException catch (e) {
-      // If backend fails after Firebase account creation, clean up Firebase
-      if (credential != null) {
-        try {
-          await credential.user?.delete();
-        } catch (_) {}
-      }
       final statusCode = e.response?.statusCode;
       final message = e.response?.data?['message'];
       if (statusCode == 409) {
@@ -117,21 +92,15 @@ class AuthRepository {
         );
       }
       throw AuthException(
-        message ??
-            'Could not connect to the server. Please try again later.',
+        message ?? 'Could not connect to the server. Please try again later.',
       );
     } catch (e) {
-      if (credential != null) {
-        try {
-          await credential.user?.delete();
-        } catch (_) {}
-      }
       throw AuthException('An unexpected error occurred. Please try again.');
     }
   }
 
   // -------------------------------------------------------------------------
-  // LOGIN via backend (username + password)
+  // LOGIN (username + password)
   // -------------------------------------------------------------------------
   Future<void> login(String username, String password) async {
     try {
@@ -153,6 +122,28 @@ class AuthRepository {
   }
 
   // -------------------------------------------------------------------------
+  // PASSWORD RECOVERY (username + recovery key + new password)
+  // -------------------------------------------------------------------------
+  Future<void> recoverPassword({
+    required String username,
+    required String recoveryKey,
+    required String newPassword,
+  }) async {
+    try {
+      await _dio.post('/auth/recover', data: {
+        'username': username,
+        'recoveryKey': recoveryKey,
+        'newPassword': newPassword,
+      });
+    } on DioException catch (e) {
+      final message = e.response?.data?['message'];
+      throw AuthException(message ?? 'Failed to recover password. Please check your recovery key.');
+    } catch (e) {
+      throw AuthException('An unexpected error occurred. Please try again.');
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // GUEST LOGIN
   // -------------------------------------------------------------------------
   Future<void> guestLogin() async {
@@ -168,7 +159,7 @@ class AuthRepository {
   }
 
   // -------------------------------------------------------------------------
-  // PROFILE PHOTO UPLOAD
+  // PROFILE PHOTO UPLOAD (optional only)
   // -------------------------------------------------------------------------
   Future<void> uploadProfilePhoto(String filePath) async {
     final formData = FormData.fromMap({
@@ -186,9 +177,6 @@ class AuthRepository {
   // LOGOUT
   // -------------------------------------------------------------------------
   Future<void> logout() async {
-    try {
-      await FirebaseAuth.instance.signOut();
-    } catch (_) {}
     await storage.deleteAll();
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
@@ -215,24 +203,5 @@ class AuthRepository {
       'profilePhotoUrl',
       data['user']['profilePhotoUrl'] ?? '',
     );
-  }
-
-  String _mapFirebaseError(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'email-already-in-use':
-        return 'This email is already registered. Please sign in instead.';
-      case 'invalid-email':
-        return 'The email address is not valid.';
-      case 'weak-password':
-        return 'Your password is too weak. Please use at least 8 characters.';
-      case 'network-request-failed':
-        return 'No internet connection. Please check your network.';
-      case 'too-many-requests':
-        return 'Too many attempts. Please wait a moment and try again.';
-      case 'operation-not-allowed':
-        return 'Email registration is not enabled. Please contact support.';
-      default:
-        return e.message ?? 'Registration failed. Please try again.';
-    }
   }
 }

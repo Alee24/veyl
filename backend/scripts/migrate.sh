@@ -15,19 +15,17 @@ echo "Target: $DB_URL"
 psql "$DB_URL" <<'SQL'
 
 -- ============================================================
--- Migration: 20260715_add_firebase_auth_fields
--- Adds email and firebaseUid columns to User table
+-- Migration: 20260715_zero_identity_and_recovery
+-- Drops identifying fields and adds recoveryKeyHash
 -- ============================================================
-ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "email" TEXT;
-ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "firebaseUid" TEXT;
-
-CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email");
-CREATE UNIQUE INDEX IF NOT EXISTS "User_firebaseUid_key" ON "User"("firebaseUid");
-
+ALTER TABLE "User" DROP COLUMN IF EXISTS "phoneNumber";
+ALTER TABLE "User" DROP COLUMN IF EXISTS "email";
+ALTER TABLE "User" DROP COLUMN IF EXISTS "firebaseUid";
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "recoveryKeyHash" TEXT;
 SQL
 
 echo ""
 echo "✅ All migrations applied successfully!"
 echo ""
 echo "Verifying schema..."
-psql "$DB_URL" -c "\d \"User\"" 2>/dev/null | grep -E "email|firebaseUid|username" || echo "(columns listed above)"
+psql "$DB_URL" -c "\d \"User\"" 2>/dev/null | grep -E "recoveryKeyHash|username" || echo "(columns listed above)"

@@ -1,18 +1,65 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../call_service.dart';
 import '../../auth/auth_provider.dart';
 
 class CallsScreen extends ConsumerWidget {
   const CallsScreen({super.key});
 
+  void _showAddCallDialog(BuildContext context, WidgetRef ref) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF161825),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('New Call', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          content: TextField(
+            controller: controller,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Enter contact username...',
+              hintStyle: const TextStyle(color: Colors.white38),
+              prefixText: '@ ',
+              prefixStyle: const TextStyle(color: Colors.white54),
+              filled: true,
+              fillColor: Colors.white.withOpacity(0.05),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              onPressed: () => Navigator.pop(context),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF5D3FD3),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Call', style: TextStyle(color: Colors.white)),
+              onPressed: () async {
+                final username = controller.text.trim();
+                if (username.isEmpty) return;
+                Navigator.pop(context);
+                final profileAsync = ref.read(userProfileProvider);
+                final currentUsername = profileAsync.value?['username'] ?? 'Guest';
+                ref.read(callServiceProvider).joinVideoCall('voice-$username', currentUsername, '');
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final callService = ref.read(callServiceProvider);
-    final profileAsync = ref.watch(userProfileProvider);
-    final currentUsername = profileAsync.value?['username'] ?? 'Guest';
 
     return Scaffold(
       appBar: AppBar(
@@ -20,7 +67,7 @@ class CallsScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: Icon(Icons.add_call, color: theme.colorScheme.primary),
-            onPressed: () => context.push('/phonebook'),
+            onPressed: () => _showAddCallDialog(context, ref),
           ),
           const SizedBox(width: 8),
         ],

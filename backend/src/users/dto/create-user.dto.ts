@@ -26,5 +26,5 @@ export class CreateUserDto {
 
   @IsOptional()
   @IsString()
-  phoneNumber?: string;
+  recoveryKey?: string;
 }

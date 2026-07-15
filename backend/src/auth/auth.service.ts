@@ -37,59 +37,26 @@ export class AuthService {
   }
 
   // -------------------------------------------------------------------------
-  // Firebase Registration: verify Firebase token, create/find Veyl user
+  // Password Recovery via Recovery Key
   // -------------------------------------------------------------------------
-  async firebaseRegister(
-    firebaseToken: string,
-    username: string,
-    displayName: string,
-    deviceId?: string,
-    ipAddress?: string,
-  ) {
-    // 1. Verify the Firebase token
-    let decodedToken: any;
-    try {
-      decodedToken = await this.firebaseAdmin.verifyIdToken(firebaseToken);
-    } catch {
-      throw new BadRequestException('Invalid Firebase token. Please try again.');
+  async recoverPassword(username: string, recoveryKey: string, newPassword: string) {
+    const user = await this.usersService.findByUsername(username);
+    if (!user || !user.recoveryKeyHash) {
+      throw new BadRequestException('User not found or recovery not configured');
     }
 
-    const firebaseUid = decodedToken.uid;
-    const email = decodedToken.email as string | undefined;
-
-    // 2. Check if a Veyl user already exists with this Firebase UID
-    let user = await this.prisma.user.findUnique({
-      where: { firebaseUid },
-    }).catch(() => null);
-
-    if (!user) {
-      // 3a. Ensure username isn't already taken
-      const existingUsername = await this.prisma.user.findUnique({
-        where: { username },
-      });
-      if (existingUsername) {
-        throw new ConflictException('Username is already taken. Please choose another.');
-      }
-
-      // 3b. Create the Veyl user record
-      const qrCode = randomBytes(16).toString('hex');
-      user = await this.prisma.user.create({
-        data: {
-          username,
-          displayName,
-          firebaseUid,
-          email: email ?? null,
-          qrCode,
-        },
-      });
+    const matches = await argon2.verify(user.recoveryKeyHash, recoveryKey);
+    if (!matches) {
+      throw new UnauthorizedException('Invalid recovery key');
     }
 
-    // 4. Issue Veyl JWT tokens
-    const payload = { username: user.username, sub: user.id, isGuest: user.isGuest };
-    const tokens = await this.generateTokens(payload);
-    await this.createSession(user.id, tokens.refreshToken, deviceId, ipAddress);
+    const newPasswordHash = await argon2.hash(newPassword);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: newPasswordHash },
+    });
 
-    return { user, ...tokens };
+    return { success: true, message: 'Password reset successfully' };
   }
 
   async guestLogin(deviceId?: string, ipAddress?: string) {

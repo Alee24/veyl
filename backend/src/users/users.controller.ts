@@ -10,14 +10,6 @@ import { extname } from 'path';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @UseGuards(JwtAuthGuard)
-  @Post('match-contacts')
-  async matchContacts(@Body('phoneNumbers') phoneNumbers: string[]) {
-    if (!phoneNumbers || !Array.isArray(phoneNumbers)) {
-      throw new BadRequestException('phoneNumbers list is required');
-    }
-    return this.usersService.matchPhoneNumbers(phoneNumbers);
-  }
 
   @UseGuards(JwtAuthGuard)
   @Post('profile-photo')

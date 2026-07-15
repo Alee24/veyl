@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "User" DROP COLUMN IF EXISTS "phoneNumber";
+ALTER TABLE "User" DROP COLUMN IF EXISTS "email";
+ALTER TABLE "User" DROP COLUMN IF EXISTS "firebaseUid";
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "recoveryKeyHash" TEXT;

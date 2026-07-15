@@ -1,11 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 final callServiceProvider = Provider((ref) => CallService());
 
 class CallService {
-  final Uuid _uuid = const Uuid();
 
   Future<void> joinVideoCall(String roomName, String displayName, String avatarUrl) async {
     final String cleanRoom = roomName.replaceAll(RegExp(r'[^a-zA-Z0-9-]'), '');

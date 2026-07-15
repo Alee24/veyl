@@ -1,10 +1,6 @@
 import { IsString, IsNotEmpty, MinLength, MaxLength } from 'class-validator';
 
-export class FirebaseRegisterDto {
-  @IsString()
-  @IsNotEmpty()
-  firebaseToken: string;
-
+export class RecoverDto {
   @IsString()
   @IsNotEmpty()
   @MinLength(3)
@@ -13,7 +9,11 @@ export class FirebaseRegisterDto {
 
   @IsString()
   @IsNotEmpty()
-  @MinLength(1)
-  @MaxLength(50)
-  displayName: string;
+  recoveryKey: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(8)
+  @MaxLength(100)
+  newPassword: string;
 }
