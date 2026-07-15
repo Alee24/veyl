@@ -1,4 +1,4 @@
-package com.example.veyl
+package com.veylkkdes.com
 
 import io.flutter.embedding.android.FlutterActivity
 
