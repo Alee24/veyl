@@ -14,6 +14,7 @@ import '../features/calling/presentation/calls_screen.dart';
 import '../features/profile/presentation/settings_screen.dart';
 import '../features/auth/auth_provider.dart';
 import '../features/contacts/presentation/phonebook_screen.dart';
+import '../features/calling/presentation/room_screen.dart';
 import 'main_layout.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -23,7 +24,8 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/login',
     redirect: (context, state) {
       final isLoggingIn = state.matchedLocation == '/login' || state.matchedLocation == '/register';
-      if (!authState && !isLoggingIn) return '/login';
+      final isRoomRoute = state.matchedLocation.startsWith('/room/');
+      if (!authState && !isLoggingIn && !isRoomRoute) return '/login';
       if (authState && isLoggingIn) return '/home';
       return null;
     },
@@ -35,6 +37,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: '/room/:id',
+        builder: (context, state) => RoomScreen(roomId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/settings',

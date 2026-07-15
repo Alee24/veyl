@@ -6,6 +6,9 @@ import '../../../core/theme.dart';
 import '../../auth/auth_provider.dart';
 import '../../calling/call_service.dart';
 import '../../chat/chat_provider.dart';
+import '../../calling/room_provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -255,7 +258,7 @@ class HomeScreen extends ConsumerWidget {
                   context,
                   Icons.group_add_outlined,
                   'Create Room',
-                  onTap: () => ref.read(callServiceProvider).joinVideoCall('meeting-room', 'ametto', ''),
+                  onTap: () => _showCreateRoomDialog(context, ref),
                 ),
               ],
             ),
@@ -425,5 +428,230 @@ class HomeScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+void _showCreateRoomDialog(BuildContext context, WidgetRef ref) {
+  final theme = Theme.of(context);
+  final roomNameController = TextEditingController(text: 'Breakout Room');
+  String roomType = 'PERMANENT';
+  int durationHours = 1;
+
+  showDialog(
+    context: context,
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF161825),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            title: const Text('Create Breakout Room', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Room Name', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: roomNameController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: 'Enter room name',
+                      hintStyle: const TextStyle(color: Colors.grey),
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.05),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Room Type', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ChoiceChip(
+                          label: const Text('Permanent'),
+                          selected: roomType == 'PERMANENT',
+                          selectedColor: theme.colorScheme.primary,
+                          labelStyle: TextStyle(color: roomType == 'PERMANENT' ? Colors.white : Colors.grey),
+                          backgroundColor: Colors.white.withOpacity(0.05),
+                          onSelected: (val) {
+                            if (val) setState(() => roomType = 'PERMANENT');
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ChoiceChip(
+                          label: const Text('Temporary'),
+                          selected: roomType == 'TEMPORARY',
+                          selectedColor: theme.colorScheme.primary,
+                          labelStyle: TextStyle(color: roomType == 'TEMPORARY' ? Colors.white : Colors.grey),
+                          backgroundColor: Colors.white.withOpacity(0.05),
+                          onSelected: (val) {
+                            if (val) setState(() => roomType = 'TEMPORARY');
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (roomType == 'TEMPORARY') ...[
+                    const SizedBox(height: 16),
+                    const Text('Expiration Duration', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<int>(
+                          value: durationHours,
+                          dropdownColor: const Color(0xFF161825),
+                          isExpanded: true,
+                          style: const TextStyle(color: Colors.white),
+                          items: const [
+                            DropdownMenuItem(value: 1, child: Text('1 Hour')),
+                            DropdownMenuItem(value: 2, child: Text('2 Hours')),
+                            DropdownMenuItem(value: 6, child: Text('6 Hours')),
+                            DropdownMenuItem(value: 12, child: Text('12 Hours')),
+                            DropdownMenuItem(value: 24, child: Text('1 Day (24h)')),
+                            DropdownMenuItem(value: 72, child: Text('3 Days')),
+                            DropdownMenuItem(value: 168, child: Text('7 Days')),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) setState(() => durationHours = val);
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                onPressed: () => Navigator.pop(context),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Create', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                onPressed: () async {
+                  final name = roomNameController.text.trim();
+                  if (name.isEmpty) return;
+                  Navigator.pop(context);
+                  _handleCreateRoom(context, ref, name, roomType, durationHours);
+                },
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
+
+void _handleCreateRoom(BuildContext context, WidgetRef ref, String name, String type, int durationHours) async {
+  try {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+    
+    final room = await ref.read(roomServiceProvider).createRoom(
+      name,
+      type,
+      durationHours: type == 'TEMPORARY' ? durationHours : null,
+    );
+    
+    if (context.mounted) Navigator.pop(context); // Pop spinner
+    
+    final String roomId = room['id'];
+    final String roomUrl = 'https://veyl.kkdes.co.ke/app.html#/room/$roomId';
+    
+    if (!context.mounted) return;
+    
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF161825),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: const Text('Room is Ready!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Anyone with this link or QR can join as a guest listener without logging in.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: QrImageView(
+                  data: roomUrl,
+                  version: QrVersions.auto,
+                  size: 160.0,
+                  gapless: false,
+                  embeddedImage: const NetworkImage('https://veyl.kkdes.co.ke/app_icon.png'),
+                  embeddedImageStyle: const QrEmbeddedImageStyle(size: Size(32, 32)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                name,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                type == 'TEMPORARY' ? 'Expires in $durationHours hour(s)' : 'Permanent Room',
+                style: const TextStyle(color: Colors.green, fontSize: 12),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: const Text('Share Invite', style: TextStyle(color: Colors.white70)),
+              onPressed: () async {
+                await Share.share(
+                  'Join my Veyl breakout room "$name"! Scan the QR or open the link to listen in: $roomUrl',
+                  subject: 'Veyl Breakout Room Invite',
+                );
+              },
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Join Room', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              onPressed: () {
+                Navigator.pop(context);
+                context.push('/room/$roomId');
+              },
+            ),
+          ],
+        );
+      },
+    );
+  } catch (e) {
+    if (context.mounted) Navigator.pop(context); // Pop spinner
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to create room: $e')),
+      );
+    }
   }
 }

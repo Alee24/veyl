@@ -87,6 +87,7 @@ export class UsersService {
         qrCode,
         isGuest: true,
         guestExpiresAt,
+        profilePhotoUrl: `https://api.dicebear.com/7.x/bottts/png?seed=${guestId}`,
       },
     });
   }

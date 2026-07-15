@@ -38,6 +38,7 @@ model User {
   blockedBy          BlockedUser[]     @relation("Blocked")
   initiatedCalls     Call[]            @relation("Caller")
   receivedCalls      Call[]            @relation("Receiver")
+  createdRooms       Room[]
 }
 
 model Session {
@@ -158,4 +159,14 @@ enum CallStatus {
   ANSWERED
   REJECTED
   ONGOING
+}
+
+model Room {
+  id           String    @id @default(uuid())
+  name         String
+  type         String    // "PERMANENT" | "TEMPORARY"
+  expiresAt    DateTime? // Null for permanent rooms
+  presenterId  String
+  presenter    User      @relation(fields: [presenterId], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now())
 }
