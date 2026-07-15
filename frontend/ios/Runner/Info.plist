@@ -67,8 +67,10 @@
 			<string>UIInterfaceOrientationLandscapeRight</string>
 		</array>
 		<key>UIStatusBarHidden</key>
-		<false/>
+		<true/>
 		<key>NSContactsUsageDescription</key>
 		<string>This app requires contacts access to match you with registered users in your address book and enable internet calling.</string>
+		<key>UIViewControllerBasedStatusBarAppearance</key>
+		<false/>
 	</dict>
 </plist>
