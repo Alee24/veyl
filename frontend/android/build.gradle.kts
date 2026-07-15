@@ -23,15 +23,4 @@ tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
 
-subprojects {
-    plugins.withId("com.android.library") {
-        configure<com.android.build.gradle.LibraryExtension> {
-            compileSdkVersion(36)
-        }
-    }
-    plugins.withId("com.android.application") {
-        configure<com.android.build.gradle.AppExtension> {
-            compileSdkVersion(36)
-        }
-    }
-}
+// Subprojects compilation SDK overrides removed to prevent configuration timing conflicts
