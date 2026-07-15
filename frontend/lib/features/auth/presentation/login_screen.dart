@@ -177,7 +177,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         hintStyle: const TextStyle(color: Colors.white38),
                         prefixIcon: const Icon(Icons.person_outline, color: Colors.white54),
                         filled: true,
-                        fillColor: Colors.white.withOpacity(0.05),
+                        fillColor: Colors.white.withValues(alpha: 0.05),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide.none,
@@ -202,7 +202,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           onPressed: () => setModalState(() => isPasswordVisible = !isPasswordVisible),
                         ),
                         filled: true,
-                        fillColor: Colors.white.withOpacity(0.05),
+                        fillColor: Colors.white.withValues(alpha: 0.05),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide.none,
@@ -223,7 +223,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         } catch (e) {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Invalid username or password')),
+                              SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
                             );
                           }
                         }

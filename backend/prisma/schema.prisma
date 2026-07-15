@@ -10,9 +10,11 @@ datasource db {
 model User {
   id              String   @id @default(uuid())
   username        String   @unique
-  passwordHash    String?  // Nullable for guest accounts that might not have a password
+  passwordHash    String?  // Nullable for guest accounts or Firebase-only users
   displayName     String
   phoneNumber     String?  @unique
+  email           String?  @unique // Email from Firebase Auth
+  firebaseUid     String?  @unique // Firebase UID for Firebase Auth users
   bio             String?
   status          String?  // e.g., "Online", "Busy", "Away"
   availability    String?  // Custom availability text

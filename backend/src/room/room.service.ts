@@ -9,6 +9,10 @@ export class RoomService {
     if (!name) {
       throw new BadRequestException('Room name is required');
     }
+
+    if (!presenterId) {
+      throw new BadRequestException('Presenter ID is required to create a room');
+    }
     
     let expiresAt: Date | null = null;
     if (type === 'TEMPORARY') {
