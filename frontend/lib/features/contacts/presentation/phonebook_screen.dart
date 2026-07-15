@@ -32,6 +32,7 @@ class _PhonebookScreenState extends ConsumerState<PhonebookScreen> with SingleTi
   }
 
   void _inviteContact(String phone) async {
+    if (phone.isEmpty) return;
     final message = Uri.encodeComponent("Hey! Let's chat securely and make free internet calls on VEYL. Download the app today!");
     final uri = Uri.parse("sms:$phone?body=$message");
     if (await canLaunchUrl(uri)) {
@@ -170,7 +171,7 @@ class _PhonebookScreenState extends ConsumerState<PhonebookScreen> with SingleTi
                             itemBuilder: (context, index) {
                               final contact = phonebookState.unmatchedContacts[index];
                               final name = contact.displayName;
-                              final phone = contact.phones.isNotEmpty ? contact.phones.first.number : '';
+                              final phone = contact.phones.isNotEmpty ? contact.phones.first : '';
 
                               return ListTile(
                                 leading: CircleAvatar(

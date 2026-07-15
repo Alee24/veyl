@@ -1,10 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_contacts/flutter_contacts.dart';
 import '../../core/api_client.dart';
+import 'contacts_service_interface.dart';
+import 'contacts_service_web.dart' if (dart.library.io) 'contacts_service_mobile.dart';
 
 class PhonebookState {
   final List<dynamic> matchedUsers;
-  final List<Contact> unmatchedContacts;
+  final List<AppContact> unmatchedContacts;
   final bool permissionGranted;
   final bool isLoading;
 
@@ -17,7 +18,7 @@ class PhonebookState {
 
   PhonebookState copyWith({
     List<dynamic>? matchedUsers,
-    List<Contact>? unmatchedContacts,
+    List<AppContact>? unmatchedContacts,
     bool? permissionGranted,
     bool? isLoading,
   }) {
@@ -32,6 +33,7 @@ class PhonebookState {
 
 class PhonebookNotifier extends StateNotifier<PhonebookState> {
   final Ref _ref;
+  final ContactsService _contactsService = ContactsService();
 
   PhonebookNotifier(this._ref)
       : super(PhonebookState(
@@ -45,20 +47,20 @@ class PhonebookNotifier extends StateNotifier<PhonebookState> {
     state = state.copyWith(isLoading: true);
     try {
       // 1. Request Contacts Permission
-      final granted = await FlutterContacts.requestPermission(readonly: true);
+      final granted = await _contactsService.requestPermission();
       if (!granted) {
         state = state.copyWith(permissionGranted: false, isLoading: false);
         return;
       }
 
-      // 2. Fetch Contacts with phone numbers
-      final contacts = await FlutterContacts.getContacts(withProperties: true);
+      // 2. Fetch Contacts
+      final contacts = await _contactsService.getContacts();
       
       // Extract unique phone numbers
       final List<String> phoneNumbers = [];
       for (final contact in contacts) {
         for (final phone in contact.phones) {
-          final normalized = phone.number.replaceAll(RegExp(r'\s+'), '');
+          final normalized = phone.replaceAll(RegExp(r'\s+'), '');
           if (normalized.isNotEmpty) {
             phoneNumbers.add(normalized);
           }
@@ -87,7 +89,7 @@ class PhonebookNotifier extends StateNotifier<PhonebookState> {
       final matchedPhones = matched.map((u) => u['phoneNumber'] as String).toList();
       final unmatched = contacts.where((contact) {
         return !contact.phones.any((p) {
-          final cleanP = p.number.replaceAll(RegExp(r'\D'), '');
+          final cleanP = p.replaceAll(RegExp(r'\D'), '');
           return matchedPhones.any((m) {
             final cleanM = m.replaceAll(RegExp(r'\D'), '');
             return cleanP.endsWith(cleanM.length >= 9 ? cleanM.substring(cleanM.length - 9) : cleanM);
