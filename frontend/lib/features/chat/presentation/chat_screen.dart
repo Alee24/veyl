@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:lottie/lottie.dart';
 import '../../../core/api_client.dart';
 import '../../calling/call_service.dart';
 import '../../auth/auth_provider.dart';
@@ -355,10 +356,45 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         );
       }
     } else {
-      contentWidget = Text(
-        text,
-        style: TextStyle(color: isMe ? Colors.white : theme.colorScheme.onBackground),
-      );
+      final String trimmed = text.trim();
+      final Map<String, String> animatedEmojiMap = {
+        '😀': '1f600',
+        '😂': '1f602',
+        '👍': '1f44d',
+        '❤️': '2764_fe0f',
+        '🔥': '1f525',
+        '🙌': '1f64c',
+        '🎉': '1f389',
+        '😎': '1f60e',
+        '😢': '1f622',
+        '😮': '1f62e',
+        '🙏': '1f64f',
+        '✨': '2728',
+      };
+      
+      if (animatedEmojiMap.containsKey(trimmed)) {
+        final codepoint = animatedEmojiMap[trimmed];
+        contentWidget = SizedBox(
+          width: 80,
+          height: 80,
+          child: Lottie.network(
+            'https://fonts.gstatic.com/s/e/notoemoji/latest/$codepoint/lottie.json',
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) => Text(
+              text,
+              style: TextStyle(
+                color: isMe ? Colors.white : theme.colorScheme.onBackground,
+                fontSize: 32,
+              ),
+            ),
+          ),
+        );
+      } else {
+        contentWidget = Text(
+          text,
+          style: TextStyle(color: isMe ? Colors.white : theme.colorScheme.onBackground),
+        );
+      }
     }
 
     return Align(

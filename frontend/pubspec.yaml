@@ -35,6 +35,8 @@ dependencies:
   google_fonts: ^6.1.0
   cached_network_image: ^3.3.0
   shimmer: ^3.0.0
+  lottie: ^3.1.2
+  share_plus: any
   
   # Media & Files
   file_picker: ^8.1.2

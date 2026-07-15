@@ -2,10 +2,36 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../../core/api_client.dart';
 import '../../auth/auth_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
+
+  void _pickAndUploadProfilePhoto(BuildContext context, WidgetRef ref) async {
+    try {
+      final picker = ImagePicker();
+      final image = await picker.pickImage(source: ImageSource.gallery, maxWidth: 500, maxHeight: 500);
+      if (image != null) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Updating profile photo...')),
+        );
+        
+        await ref.read(authProvider).uploadProfilePhoto(image.path);
+        
+        // Invalidate provider to refresh profile
+        ref.invalidate(userProfileProvider);
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to upload photo: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -14,6 +40,7 @@ class ProfileScreen extends ConsumerWidget {
     final profileAsync = ref.watch(userProfileProvider);
     final username = profileAsync.value?['username'] ?? 'Guest';
     final displayName = profileAsync.value?['displayName'] ?? 'Guest User';
+    final profilePhotoUrl = profileAsync.value?['profilePhotoUrl'];
 
     return Scaffold(
       appBar: AppBar(
@@ -41,9 +68,27 @@ class ProfileScreen extends ConsumerWidget {
                     padding: const EdgeInsets.all(24.0),
                     child: Row(
                       children: [
-                        CircleAvatar(
-                          radius: 30,
-                          backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=$username'),
+                        GestureDetector(
+                          onTap: () => _pickAndUploadProfilePhoto(context, ref),
+                          child: Stack(
+                            alignment: Alignment.bottomRight,
+                            children: [
+                              CircleAvatar(
+                                radius: 30,
+                                backgroundImage: (profilePhotoUrl != null && profilePhotoUrl.isNotEmpty)
+                                    ? NetworkImage('${getBaseUrl()}$profilePhotoUrl')
+                                    : NetworkImage('https://i.pravatar.cc/150?u=$username') as ImageProvider,
+                              ),
+                              Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.camera_alt, size: 10, color: Colors.black87),
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(width: 16),
                         Column(
@@ -96,22 +141,20 @@ class ProfileScreen extends ConsumerWidget {
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
                                 color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(12),
                               ),
                               child: QrImageView(
                                 data: 'https://veyl.kkdes.co.ke/$username',
                                 version: QrVersions.auto,
                                 size: 160.0,
                                 gapless: false,
+                                embeddedImage: (profilePhotoUrl != null && profilePhotoUrl.isNotEmpty)
+                                    ? NetworkImage('${getBaseUrl()}$profilePhotoUrl')
+                                    : const NetworkImage('https://veyl.kkdes.co.ke/app_icon.png') as ImageProvider,
+                                embeddedImageStyle: const QrEmbeddedImageStyle(
+                                  size: Size(36, 36),
+                                ),
                               ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.primary,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.shield, color: Colors.white, size: 24),
                             ),
                           ],
                         ),
@@ -127,7 +170,12 @@ class ProfileScreen extends ConsumerWidget {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: () {},
+                            onPressed: () async {
+                              await Share.share(
+                                'Connect with me on Veyl! Scan my identity or download the app: https://veyl.kkdes.co.ke/',
+                                subject: 'Veyl Profile Connection',
+                              );
+                            },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: theme.colorScheme.primary,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

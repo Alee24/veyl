@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/api_client.dart';
 import '../../../core/theme.dart';
 import '../../auth/auth_provider.dart';
 import '../../calling/call_service.dart';
@@ -17,6 +18,7 @@ class HomeScreen extends ConsumerWidget {
     final profileAsync = ref.watch(userProfileProvider);
     final username = profileAsync.value?['username'] ?? 'Guest';
     final displayName = profileAsync.value?['displayName'] ?? 'Guest User';
+    final profilePhotoUrl = profileAsync.value?['profilePhotoUrl'];
     final currentUserId = profileAsync.value?['userId'] ?? '';
     final chatsAsync = ref.watch(userChatsProvider);
 
@@ -54,7 +56,9 @@ class HomeScreen extends ConsumerWidget {
                 children: [
                   CircleAvatar(
                     radius: 24,
-                    backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=$username'),
+                    backgroundImage: (profilePhotoUrl != null && profilePhotoUrl.isNotEmpty)
+                        ? NetworkImage('${getBaseUrl()}$profilePhotoUrl')
+                        : NetworkImage('https://i.pravatar.cc/150?u=$username') as ImageProvider,
                   ),
                   const SizedBox(width: 16),
                   Expanded(

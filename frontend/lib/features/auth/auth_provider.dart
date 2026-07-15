@@ -6,13 +6,32 @@ import '../../core/api_client.dart';
 final authStateProvider = StateProvider<bool>((ref) => false);
 
 final userProfileProvider = FutureProvider<Map<String, String>>((ref) async {
-  final prefs = await SharedPreferences.getInstance();
-  return {
-    'username': prefs.getString('username') ?? 'Guest',
-    'displayName': prefs.getString('displayName') ?? 'Guest User',
-    'qrCode': prefs.getString('qrCode') ?? '',
-    'userId': prefs.getString('userId') ?? '',
-  };
+  try {
+    final response = await ref.read(dioProvider).get('/auth/me');
+    final user = response.data;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('profilePhotoUrl', user['profilePhotoUrl'] ?? '');
+    await prefs.setString('displayName', user['displayName'] ?? '');
+    await prefs.setString('username', user['username'] ?? '');
+    await prefs.setString('qrCode', user['qrCode'] ?? '');
+    await prefs.setString('userId', user['id'] ?? '');
+    return {
+      'username': user['username'] ?? 'Guest',
+      'displayName': user['displayName'] ?? 'Guest User',
+      'qrCode': user['qrCode'] ?? '',
+      'userId': user['id'] ?? '',
+      'profilePhotoUrl': user['profilePhotoUrl'] ?? '',
+    };
+  } catch (e) {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'username': prefs.getString('username') ?? 'Guest',
+      'displayName': prefs.getString('displayName') ?? 'Guest User',
+      'qrCode': prefs.getString('qrCode') ?? '',
+      'userId': prefs.getString('userId') ?? '',
+      'profilePhotoUrl': prefs.getString('profilePhotoUrl') ?? '',
+    };
+  }
 });
 
 final authProvider = Provider((ref) {
@@ -58,6 +77,17 @@ class AuthRepository {
     _authState.state = true;
   }
 
+  Future<void> uploadProfilePhoto(String filePath) async {
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(filePath),
+    });
+    final response = await _dio.post('/users/profile-photo', data: formData);
+    
+    // Cache the updated url
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('profilePhotoUrl', response.data['profilePhotoUrl'] ?? '');
+  }
+
   Future<void> _saveTokens(Map<String, dynamic> data) async {
     await storage.write(key: 'accessToken', value: data['accessToken']);
     await storage.write(key: 'refreshToken', value: data['refreshToken']);
@@ -68,6 +98,7 @@ class AuthRepository {
     await prefs.setString('displayName', data['user']['displayName'] ?? data['user']['username'] ?? '');
     await prefs.setString('qrCode', data['user']['qrCode'] ?? '');
     await prefs.setString('userId', data['user']['id'] ?? '');
+    await prefs.setString('profilePhotoUrl', data['user']['profilePhotoUrl'] ?? '');
   }
   
   Future<void> logout() async {

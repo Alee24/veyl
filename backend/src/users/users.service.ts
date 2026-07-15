@@ -108,4 +108,20 @@ export class UsersService {
       where: { qrCode },
     });
   }
+
+  async updateProfilePhoto(userId: string, profilePhotoUrl: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { profilePhotoUrl },
+      select: {
+        id: true,
+        username: true,
+        displayName: true,
+        profilePhotoUrl: true,
+        bio: true,
+        phoneNumber: true,
+        qrCode: true,
+      }
+    });
+  }
 }
