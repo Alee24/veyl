@@ -11,6 +11,11 @@ import { extname } from 'path';
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
+  @Get()
+  async getUserChats(@Request() req: any) {
+    return this.chatService.getUserChats(req.user.userId);
+  }
+
   @Post('direct/:contactId')
   async createDirectChat(@Request() req: any, @Param('contactId') contactId: string) {
     return this.chatService.createDirectChat(req.user.userId, contactId);

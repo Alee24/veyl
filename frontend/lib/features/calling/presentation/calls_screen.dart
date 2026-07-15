@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../call_service.dart';
+import '../../auth/auth_provider.dart';
 
 class CallsScreen extends ConsumerWidget {
   const CallsScreen({super.key});
@@ -9,6 +10,8 @@ class CallsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final callService = ref.read(callServiceProvider);
+    final profileAsync = ref.watch(userProfileProvider);
+    final currentUsername = profileAsync.value?['username'] ?? 'Guest';
 
     return Scaffold(
       appBar: AppBar(
@@ -16,7 +19,7 @@ class CallsScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: Icon(Icons.add_call, color: theme.colorScheme.primary),
-            onPressed: () => callService.joinVideoCall('new-call', 'ametto', ''),
+            onPressed: () => callService.joinVideoCall('new-call', currentUsername, ''),
           ),
           const SizedBox(width: 8),
         ],
@@ -45,100 +48,30 @@ class CallsScreen extends ConsumerWidget {
           
           // Call Log list
           Expanded(
-            child: ListView(
-              children: [
-                _buildCallLogTile(
-                  context,
-                  'Sarah Johnson',
-                  'Incoming',
-                  'Today, 10:15 AM',
-                  Icons.call_received,
-                  Colors.green,
-                  true,
-                  onTap: () => callService.joinVideoCall('sarah-johnson', 'ametto', ''),
-                ),
-                _buildCallLogTile(
-                  context,
-                  'Sarah Johnson',
-                  'Outgoing',
-                  'Today, 10:10 AM',
-                  Icons.call_made,
-                  theme.colorScheme.primary,
-                  true,
-                  onTap: () => callService.joinVideoCall('sarah-johnson', 'ametto', ''),
-                ),
-                _buildCallLogTile(
-                  context,
-                  'Mike Williams',
-                  'Missed',
-                  'Yesterday, 6:42 PM',
-                  Icons.call_missed,
-                  Colors.red,
-                  false,
-                  onTap: () => callService.joinVideoCall('mike-williams', 'ametto', ''),
-                ),
-                _buildCallLogTile(
-                  context,
-                  'Emma Brown',
-                  'Incoming',
-                  'July 12, 11:30 AM',
-                  Icons.call_received,
-                  Colors.green,
-                  true,
-                  onTap: () => callService.joinVideoCall('emma-brown', 'ametto', ''),
-                ),
-                _buildCallLogTile(
-                  context,
-                  'Design Team Room',
-                  'Group Call',
-                  'July 11, 4:15 PM',
-                  Icons.group,
-                  theme.colorScheme.primary,
-                  true,
-                  onTap: () => callService.joinVideoCall('design-team', 'ametto', ''),
-                ),
-              ],
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.call_end_outlined, size: 64, color: theme.dividerColor.withOpacity(0.2)),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No call logs yet',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onBackground),
+                  ),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                    child: Text(
+                      'Voice and video calls made over the internet will appear here. Start a call directly inside a chat room!',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: theme.disabledColor),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildCallLogTile(
-    BuildContext context,
-    String name,
-    String type,
-    String time,
-    IconData icon,
-    Color iconColor,
-    bool isVideo, {
-    required VoidCallback onTap,
-  }) {
-    final theme = Theme.of(context);
-    return ListTile(
-      leading: const CircleAvatar(
-        radius: 20,
-        backgroundColor: Colors.grey,
-        child: Icon(Icons.person, color: Colors.white),
-      ),
-      title: Text(
-        name,
-        style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onBackground),
-      ),
-      subtitle: Row(
-        children: [
-          Icon(icon, size: 14, color: iconColor),
-          const SizedBox(width: 4),
-          Text('$type • $time', style: const TextStyle(color: Colors.grey, fontSize: 12)),
-        ],
-      ),
-      trailing: IconButton(
-        icon: Icon(
-          isVideo ? Icons.videocam_outlined : Icons.call_outlined,
-          color: theme.colorScheme.primary,
-        ),
-        onPressed: onTap,
       ),
     );
   }

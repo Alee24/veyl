@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:go_router/go_router.dart';
+import '../../chat/chat_provider.dart';
 
-class QrScannerScreen extends StatefulWidget {
+class QrScannerScreen extends ConsumerStatefulWidget {
   const QrScannerScreen({super.key});
 
   @override
-  State<QrScannerScreen> createState() => _QrScannerScreenState();
+  ConsumerState<QrScannerScreen> createState() => _QrScannerScreenState();
 }
 
-class _QrScannerScreenState extends State<QrScannerScreen> {
+class _QrScannerScreenState extends ConsumerState<QrScannerScreen> {
   bool _isHandlingScan = false;
 
   void _onDetect(BarcodeCapture capture) async {
@@ -20,17 +22,46 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       setState(() => _isHandlingScan = true);
       final String code = barcodes.first.rawValue!;
       
-      // Navigate to user profile based on QR code data
-      // e.g., if code is veyl://profile/ABC123XYZ
+      // Parse username from scanned URL: e.g., "https://veyl.kkdes.co.ke/sarah" -> "sarah"
+      String contactUsername = code.trim();
+      if (contactUsername.contains('://')) {
+        try {
+          final uri = Uri.parse(contactUsername);
+          final pathSegments = uri.pathSegments;
+          if (pathSegments.isNotEmpty) {
+            contactUsername = pathSegments.last;
+          }
+        } catch (_) {
+          // Fallback to raw scanned code if parsing fails
+        }
+      }
+
+      // Strip leading "@" if present
+      if (contactUsername.startsWith('@')) {
+        contactUsername = contactUsername.substring(1);
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Scanned: $code')),
+        SnackBar(content: Text('Starting chat with @$contactUsername...')),
       );
-      
-      // Delay to avoid multiple scans
-      await Future.delayed(const Duration(seconds: 2));
-      if (mounted) {
-        setState(() => _isHandlingScan = false);
-        context.pop();
+
+      try {
+        final chatId = await ref.read(chatProvider).createChatByUsername(contactUsername);
+        if (mounted) {
+          ref.invalidate(userChatsProvider); // Refresh chat list
+          context.go('/chat/$chatId');
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('User not found or chat initialization failed')),
+          );
+          // Wait before allowing another scan
+          await Future.delayed(const Duration(seconds: 2));
+          if (mounted) {
+            setState(() => _isHandlingScan = false);
+          }
+        }
       }
     }
   }

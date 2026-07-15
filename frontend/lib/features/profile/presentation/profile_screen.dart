@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../../auth/auth_provider.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final profileAsync = ref.watch(userProfileProvider);
+    final username = profileAsync.value?['username'] ?? 'Guest';
+    final displayName = profileAsync.value?['displayName'] ?? 'Guest User';
 
     return Scaffold(
       appBar: AppBar(
@@ -32,28 +37,28 @@ class ProfileScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  const Padding(
-                    padding: EdgeInsets.all(24.0),
+                  Padding(
+                    padding: const EdgeInsets.all(24.0),
                     child: Row(
                       children: [
                         CircleAvatar(
                           radius: 30,
-                          backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=ametto'),
+                          backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=$username'),
                         ),
-                        SizedBox(width: 16),
+                        const SizedBox(width: 16),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'ametto',
-                              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                              displayName,
+                              style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                             ),
                             Text(
-                              '@ametto',
-                              style: TextStyle(color: Colors.white70, fontSize: 14),
+                              '@$username',
+                              style: const TextStyle(color: Colors.white70, fontSize: 14),
                             ),
-                            SizedBox(height: 4),
-                            Row(
+                            const SizedBox(height: 4),
+                            const Row(
                               children: [
                                 Icon(Icons.circle, color: Colors.greenAccent, size: 10),
                                 SizedBox(width: 4),
@@ -94,7 +99,7 @@ class ProfileScreen extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: QrImageView(
-                                data: 'https://veyl.kkdes.co.ke/ametto',
+                                data: 'https://veyl.kkdes.co.ke/$username',
                                 version: QrVersions.auto,
                                 size: 160.0,
                                 gapless: false,
@@ -112,7 +117,7 @@ class ProfileScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'veyl.kkdes.co.ke/ametto',
+                          'veyl.kkdes.co.ke/$username',
                           style: TextStyle(
                             color: theme.colorScheme.primary,
                             fontWeight: FontWeight.bold,

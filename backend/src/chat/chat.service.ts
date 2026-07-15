@@ -7,6 +7,35 @@ export type MessageType = 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO' | 'FILE' | 'VOICE
 export class ChatService {
   constructor(private prisma: PrismaService) {}
 
+  async getUserChats(userId: string) {
+    return this.prisma.chat.findMany({
+      where: {
+        participants: {
+          some: { userId }
+        }
+      },
+      include: {
+        participants: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                displayName: true,
+                profilePhotoUrl: true,
+                status: true
+              }
+            }
+          }
+        },
+        messages: {
+          take: 1,
+          orderBy: { createdAt: 'desc' }
+        }
+      }
+    });
+  }
+
   async createDirectChat(userId: string, contactId: string) {
     // Check if a direct chat already exists
     const existingChat = await this.prisma.chat.findFirst({

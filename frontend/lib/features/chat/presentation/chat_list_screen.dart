@@ -1,13 +1,92 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../auth/auth_provider.dart';
+import '../chat_provider.dart';
 
-class ChatListScreen extends StatelessWidget {
+class ChatListScreen extends ConsumerWidget {
   const ChatListScreen({super.key});
 
+  void _showAddChatDialog(BuildContext context, WidgetRef ref) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF161825),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('New Chat', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          content: TextField(
+            controller: controller,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Enter contact username...',
+              hintStyle: const TextStyle(color: Colors.white38),
+              prefixText: '@ ',
+              prefixStyle: const TextStyle(color: Colors.white54),
+              filled: true,
+              fillColor: Colors.white.withOpacity(0.05),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              onPressed: () => Navigator.pop(context),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF5D3FD3),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Start Chat', style: TextStyle(color: Colors.white)),
+              onPressed: () async {
+                final username = controller.text.trim();
+                if (username.isEmpty) return;
+                try {
+                  final chatId = await ref.read(chatProvider).createChatByUsername(username);
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ref.invalidate(userChatsProvider); // Refresh list
+                    context.push('/chat/$chatId');
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('User not found or chat initialization failed')),
+                    );
+                  }
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  String _formatMessageTime(String createdAtString) {
+    try {
+      final dateTime = DateTime.parse(createdAtString).toLocal();
+      final hour = dateTime.hour > 12 ? dateTime.hour - 12 : (dateTime.hour == 0 ? 12 : dateTime.hour);
+      final minute = dateTime.minute.toString().padLeft(2, '0');
+      final period = dateTime.hour >= 12 ? 'PM' : 'AM';
+      return '$hour:$minute $period';
+    } catch (e) {
+      return '';
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final chatsAsync = ref.watch(userChatsProvider);
+    final profileAsync = ref.watch(userProfileProvider);
+    
+    final currentUserId = profileAsync.value?['userId'] ?? '';
 
     return Scaffold(
       appBar: AppBar(
@@ -15,7 +94,7 @@ class ChatListScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: Icon(Icons.add_circle, color: theme.colorScheme.primary, size: 32),
-            onPressed: () {},
+            onPressed: () => _showAddChatDialog(context, ref),
           ),
           const SizedBox(width: 8),
         ],
@@ -61,16 +140,96 @@ class ChatListScreen extends StatelessWidget {
           
           // Chat List
           Expanded(
-            child: ListView(
-              children: [
-                _buildChatTile('Sarah Johnson', 'Hey! Are we still meeting today?', '9:41 AM', 2, 'https://i.pravatar.cc/150?u=1', context),
-                _buildChatTile('Design Team', 'Alex: Here\'s the update', '9:33 AM', 5, 'https://i.pravatar.cc/150?u=2', context),
-                _buildChatTile('Mike Williams', 'Voice message', 'Yesterday', 0, 'https://i.pravatar.cc/150?u=3', context, isVoice: true),
-                _buildChatTile('Project Galaxy', 'Lisa: Great work everyone!', 'Yesterday', 0, 'https://i.pravatar.cc/150?u=4', context, isMuted: true),
-                _buildChatTile('Emma Brown', 'Awesome! Thanks', 'Mon', 0, 'https://i.pravatar.cc/150?u=5', context),
-                _buildChatTile('Family Group', 'Mom: Dinner at 7pm', 'Mon', 0, 'https://i.pravatar.cc/150?u=6', context),
-                _buildChatTile('Kevin Lee', 'See you tomorrow', 'Sun', 0, 'https://i.pravatar.cc/150?u=7', context),
-              ],
+            child: chatsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(
+                child: Text('Failed to load chats', style: TextStyle(color: theme.disabledColor)),
+              ),
+              data: (chats) {
+                if (chats.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.chat_bubble_outline, size: 64, color: theme.dividerColor.withOpacity(0.2)),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No active chats yet',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onBackground),
+                        ),
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                          child: Text(
+                            'Scan a QR code or tap the "+" icon at the top to start chatting with your contacts securely!',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: theme.disabledColor),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  itemCount: chats.length,
+                  itemBuilder: (context, index) {
+                    final chat = chats[index];
+                    
+                    // Find the other participant user object
+                    final participants = chat['participants'] as List<dynamic>;
+                    final otherParticipant = participants.firstWhere(
+                      (p) => p['userId'] != currentUserId,
+                      orElse: () => null,
+                    );
+                    
+                    if (otherParticipant == null) return const SizedBox.shrink();
+                    
+                    final otherUser = otherParticipant['user'];
+                    final String otherUsername = otherUser['username'] ?? 'User';
+                    final String otherDisplayName = otherUser['displayName'] ?? otherUsername;
+                    final String avatarUrl = 'https://i.pravatar.cc/150?u=$otherUsername';
+                    
+                    // Last message details
+                    final messages = chat['messages'] as List<dynamic>?;
+                    final lastMsg = messages != null && messages.isNotEmpty ? messages[0] : null;
+                    final String lastMessageText = lastMsg?['content'] ?? 'No messages yet';
+                    final String time = lastMsg != null ? _formatMessageTime(lastMsg['createdAt']) : '';
+                    final bool isUnread = lastMsg != null && lastMsg['senderId'] != currentUserId && lastMsg['status'] != 'READ';
+
+                    return ListTile(
+                      onTap: () => context.push('/chat/${chat['id']}'),
+                      leading: CircleAvatar(
+                        radius: 24,
+                        backgroundImage: NetworkImage(avatarUrl),
+                      ),
+                      title: Text(
+                        otherDisplayName,
+                        style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onBackground),
+                      ),
+                      subtitle: Text(
+                        lastMessageText,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: isUnread ? theme.colorScheme.onBackground : Colors.grey),
+                      ),
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(time, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                          if (isUnread)
+                            Container(
+                              margin: const EdgeInsets.only(top: 4),
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(color: theme.colorScheme.primary, shape: BoxShape.circle),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
             ),
           ),
         ],
@@ -92,68 +251,6 @@ class ChatListScreen extends StatelessWidget {
           color: isSelected ? Colors.white : theme.colorScheme.onBackground.withOpacity(0.8),
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
-      ),
-    );
-  }
-
-  Widget _buildChatTile(
-    String name,
-    String message,
-    String time,
-    int unread,
-    String avatarUrl,
-    BuildContext context, {
-    bool isVoice = false,
-    bool isMuted = false,
-  }) {
-    final theme = Theme.of(context);
-    final String chatId = name.toLowerCase().replaceAll(' ', '-');
-    return ListTile(
-      onTap: () => context.push('/chat/$chatId'),
-      leading: CircleAvatar(
-        radius: 24,
-        backgroundImage: NetworkImage(avatarUrl),
-      ),
-      title: Text(
-        name,
-        style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onBackground),
-      ),
-      subtitle: Row(
-        children: [
-          if (isVoice) const Icon(Icons.mic, size: 14, color: Colors.grey),
-          if (isVoice) const SizedBox(width: 4),
-          Expanded(
-            child: Text(
-              message,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.grey),
-            ),
-          ),
-        ],
-      ),
-      trailing: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (isMuted) const Icon(Icons.volume_off, size: 14, color: Colors.grey),
-              if (isMuted) const SizedBox(width: 4),
-              Text(time, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-            ],
-          ),
-          if (unread > 0)
-            Container(
-              margin: const EdgeInsets.only(top: 4),
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(color: theme.colorScheme.primary, shape: BoxShape.circle),
-              child: Text(
-                unread.toString(),
-                style: const TextStyle(color: Colors.white, fontSize: 10),
-              ),
-            ),
-        ],
       ),
     );
   }

@@ -2,8 +2,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'dart:async';
 import '../../core/api_client.dart';
 import 'socket_service.dart';
+
+final userChatsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  final dio = ref.read(dioProvider);
+  final response = await dio.get('/chat');
+  return response.data as List<dynamic>;
+});
 
 final chatProvider = Provider((ref) {
   return ChatRepository(
@@ -17,6 +24,14 @@ class ChatRepository {
   final SocketService _socketService;
 
   ChatRepository(this._dio, this._socketService);
+
+  Future<String> createChatByUsername(String username) async {
+    final userResponse = await _dio.get('/users/$username');
+    final contactId = userResponse.data['id'];
+    
+    final chatResponse = await _dio.post('/chat/direct/$contactId');
+    return chatResponse.data['id'];
+  }
 
   Future<List<dynamic>> getChatHistory(String chatId) async {
     try {
@@ -33,20 +48,75 @@ class ChatRepository {
       if (cached != null) {
         return jsonDecode(cached);
       }
-      rethrow;
+      return []; // Return empty list on failure instead of rethrowing
     }
   }
 
   Future<void> sendFile(String chatId, String filePath) async {
-    // Implement file upload with Dio FormData, then send message via socket with fileUrl
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(filePath),
     });
 
     final response = await _dio.post('/chat/upload', data: formData);
     final fileUrl = response.data['url'];
-    
-    // Send socket event
     _socketService.sendMessage(chatId, fileUrl, 'FILE');
   }
 }
+
+class MessagesState {
+  final List<dynamic> messages;
+  final bool isLoading;
+  MessagesState({required this.messages, this.isLoading = false});
+}
+
+class MessagesNotifier extends StateNotifier<MessagesState> {
+  final ChatRepository _chatRepository;
+  final SocketService _socketService;
+  final String _chatId;
+  StreamSubscription? _messageSubscription;
+
+  MessagesNotifier(this._chatRepository, this._socketService, this._chatId)
+      : super(MessagesState(messages: [], isLoading: true)) {
+    _init();
+  }
+
+  void _init() async {
+    try {
+      final history = await _chatRepository.getChatHistory(_chatId);
+      state = MessagesState(messages: history, isLoading: false);
+    } catch (e) {
+      state = MessagesState(messages: [], isLoading: false);
+    }
+
+    await _socketService.connect();
+    _socketService.joinChat(_chatId);
+
+    _messageSubscription = _socketService.onMessage.listen((msg) {
+      // Backend message structure includes chatId
+      if (msg['chatId'] == _chatId) {
+        state = MessagesState(
+          messages: [msg, ...state.messages],
+          isLoading: false,
+        );
+      }
+    });
+  }
+
+  void sendMessage(String content) {
+    if (content.trim().isEmpty) return;
+    _socketService.sendMessage(_chatId, content, 'TEXT');
+  }
+
+  @override
+  void dispose() {
+    _messageSubscription?.cancel();
+    _socketService.leaveChat(_chatId);
+    super.dispose();
+  }
+}
+
+final messagesProvider = StateNotifierProvider.family<MessagesNotifier, MessagesState, String>((ref, chatId) {
+  final chatRepo = ref.read(chatProvider);
+  final socketService = ref.read(socketServiceProvider);
+  return MessagesNotifier(chatRepo, socketService, chatId);
+});

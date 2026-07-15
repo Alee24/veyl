@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme.dart';
+import '../../auth/auth_provider.dart';
 import '../../calling/call_service.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -12,6 +13,9 @@ class HomeScreen extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final profileAsync = ref.watch(userProfileProvider);
+    final username = profileAsync.value?['username'] ?? 'Guest';
+    final displayName = profileAsync.value?['displayName'] ?? 'Guest User';
 
     return Scaffold(
       appBar: AppBar(
@@ -45,9 +49,9 @@ class HomeScreen extends ConsumerWidget {
               ),
               child: Row(
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 24,
-                    backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=ametto'),
+                    backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=$username'),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -55,16 +59,16 @@ class HomeScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'ametto',
+                          displayName,
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                             color: theme.colorScheme.onBackground,
                           ),
                         ),
-                        const Text(
-                          '@ametto',
-                          style: TextStyle(color: Colors.grey),
+                        Text(
+                          '@$username',
+                          style: const TextStyle(color: Colors.grey),
                         ),
                         const SizedBox(height: 4),
                         const Row(
@@ -109,7 +113,7 @@ class HomeScreen extends ConsumerWidget {
                     children: [
                       const Text('Your link', style: TextStyle(color: Colors.grey, fontSize: 12)),
                       Text(
-                        'veyl.kkdes.co.ke/ametto',
+                        'veyl.kkdes.co.ke/$username',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: theme.colorScheme.onBackground,
