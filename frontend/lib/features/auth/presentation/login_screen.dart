@@ -20,7 +20,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) context.go('/home');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Guest Login failed')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Guest Login failed')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -43,7 +43,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Container(
                   width: 80,
                   height: 80,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
                       colors: [Colors.purpleAccent, Colors.deepPurple],
