@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 import 'dart:ui';
 
 class VeylLogoWidget extends StatefulWidget {
@@ -31,13 +30,11 @@ class _VeylLogoWidgetState extends State<VeylLogoWidget> with TickerProviderStat
   late Animation<double> _interactionRotation;
   late Animation<double> _interactionGlow;
 
-  bool _isHovered = false;
-
   @override
   void initState() {
     super.initState();
 
-    // 1. Entrance Animation Setup (1.8 seconds)
+    // Entrance Animation Setup (1.8 seconds)
     _entranceController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
@@ -57,7 +54,6 @@ class _VeylLogoWidgetState extends State<VeylLogoWidget> with TickerProviderStat
       ),
     );
 
-    // Blur goes from 15.0 to 0.0
     _blur = Tween<double>(begin: 15.0, end: 0.0).animate(
       CurvedAnimation(
         parent: _entranceController,
@@ -65,7 +61,6 @@ class _VeylLogoWidgetState extends State<VeylLogoWidget> with TickerProviderStat
       ),
     );
 
-    // Rotation < 2 degrees (approx. 0.035 radians)
     _rotation = Tween<double>(begin: 0.035, end: 0.0).animate(
       CurvedAnimation(
         parent: _entranceController,
@@ -73,7 +68,6 @@ class _VeylLogoWidgetState extends State<VeylLogoWidget> with TickerProviderStat
       ),
     );
 
-    // Soft glow behind logo fades naturally
     _glow = Tween<double>(begin: 1.0, end: 0.0).animate(
       CurvedAnimation(
         parent: _entranceController,
@@ -81,13 +75,12 @@ class _VeylLogoWidgetState extends State<VeylLogoWidget> with TickerProviderStat
       ),
     );
 
-    // 2. Interactive Hover Setup (0.9 seconds)
+    // Interactive Hover Setup (0.9 seconds)
     _interactionController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
 
-    // Tap/Hover triggers brief scale up to 1.08x
     _interactionScale = TweenSequence<double>([
       TweenSequenceItem(
         tween: Tween<double>(begin: 1.0, end: 1.08).chain(CurveTween(curve: Curves.easeOutBack)),
@@ -99,22 +92,21 @@ class _VeylLogoWidgetState extends State<VeylLogoWidget> with TickerProviderStat
       ),
     ]).animate(_interactionController);
 
-    // Rapid micro-rotation (6-8 degrees -> approx 0.12 radians)
     _interactionRotation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0.0, end: 0.12).chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween<double>(begin: 0.0, end: 0.1).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 20,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0.12, end: -0.1).chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween<double>(begin: 0.1, end: -0.08).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 20,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: -0.1, end: 0.05).chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween<double>(begin: -0.08, end: 0.04).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 20,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0.05, end: 0.0).chain(CurveTween(curve: Curves.easeOut)),
+        tween: Tween<double>(begin: 0.04, end: 0.0).chain(CurveTween(curve: Curves.easeOut)),
         weight: 40,
       ),
     ]).animate(_interactionController);
@@ -154,14 +146,11 @@ class _VeylLogoWidgetState extends State<VeylLogoWidget> with TickerProviderStat
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final accentColor = theme.colorScheme.secondary;
+    final accentColor = const Color(0xFF00F2FE); // Metallic Cyan
 
     return MouseRegion(
-      onEnter: (_) {
-        setState(() => _isHovered = true);
-        _triggerInteraction();
-      },
-      onExit: (_) => setState(() => _isHovered = false),
+      onEnter: (_) => _triggerInteraction(),
+      onExit: (_) {},
       child: GestureDetector(
         onTap: _triggerInteraction,
         child: AnimatedBuilder(
@@ -170,29 +159,29 @@ class _VeylLogoWidgetState extends State<VeylLogoWidget> with TickerProviderStat
             final double currentScale = _scale.value * _interactionScale.value;
             final double currentRotation = _rotation.value + _interactionRotation.value;
             final double currentBlur = _blur.value;
-            final double glowOpacity = (isDark ? 0.35 : 0.15) * (_glow.value + _interactionGlow.value);
+            final double glowOpacity = (isDark ? 0.3 : 0.1) * (_glow.value + _interactionGlow.value);
 
             return Stack(
               alignment: Alignment.center,
               children: [
-                // Soft glow radial layer behind the logo
+                // Glowing aura behind logo
                 if (glowOpacity > 0.01)
                   Container(
-                    width: widget.size * 1.8,
-                    height: widget.size * 1.8,
+                    width: widget.size * 1.6,
+                    height: widget.size * 1.6,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
                         colors: [
                           accentColor.withOpacity(glowOpacity),
-                          accentColor.withOpacity(glowOpacity * 0.4),
+                          const Color(0xFF8B5CF6).withOpacity(glowOpacity * 0.4),
                           Colors.transparent,
                         ],
                       ),
                     ),
                   ),
                 
-                // Crisp Vector Logo with Blur and Transform matrices applied
+                // Crisp Ribbon Logo
                 Opacity(
                   opacity: _opacity.value,
                   child: ImageFiltered(
@@ -208,10 +197,7 @@ class _VeylLogoWidgetState extends State<VeylLogoWidget> with TickerProviderStat
                       alignment: Alignment.center,
                       child: CustomPaint(
                         size: Size(widget.size, widget.size),
-                        painter: _VeylLogoPainter(
-                          color: isDark ? Colors.white : theme.colorScheme.primary,
-                          accentColor: accentColor,
-                        ),
+                        painter: _VeylLogoPainter(),
                       ),
                     ),
                   ),
@@ -226,53 +212,51 @@ class _VeylLogoWidgetState extends State<VeylLogoWidget> with TickerProviderStat
 }
 
 class _VeylLogoPainter extends CustomPainter {
-  final Color color;
-  final Color accentColor;
-
-  _VeylLogoPainter({required this.color, required this.accentColor});
-
   @override
   void paint(Canvas canvas, Size size) {
     final double w = size.width;
     final double h = size.height;
-    final double radius = w * 0.28;
-    final double cx = w / 2;
-    final double cy = h / 2;
 
-    // Draw background/accent geometric luxury shield backplate
-    final Paint outlinePaint = Paint()
-      ..color = accentColor.withOpacity(0.08)
-      ..style = PaintingStyle.fill;
-    
-    final Path shieldPath = Path();
-    shieldPath.moveTo(cx, cy - radius * 1.5);
-    shieldPath.quadraticBezierTo(cx + radius * 1.5, cy - radius * 1.4, cx + radius * 1.4, cy);
-    shieldPath.quadraticBezierTo(cx + radius * 1.2, cy + radius * 1.5, cx, cy + radius * 1.8);
-    shieldPath.quadraticBezierTo(cx - radius * 1.2, cy + radius * 1.5, cx - radius * 1.4, cy);
-    shieldPath.quadraticBezierTo(cx - radius * 1.5, cy - radius * 1.4, cx, cy - radius * 1.5);
-    canvas.drawPath(shieldPath, outlinePaint);
-
-    // Draw main premium geometric shape: Stylized Interlocking Key Loop / Infinity Shield
+    // Draw the gorgeous metallic ribbon V logo
     final Paint paint = Paint()
-      ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.08
+      ..strokeWidth = w * 0.16
       ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
       ..isAntiAlias = true;
 
-    // Draw first interlocking loop (Left)
-    canvas.drawCircle(Offset(cx - radius * 0.5, cy), radius, paint);
+    // Premium Linear Gradient: Cyan -> Blue -> Indigo -> Purple
+    final Rect rect = Rect.fromLTWH(0, 0, w, h);
+    paint.shader = const LinearGradient(
+      colors: [
+        Color(0xFF00F2FE), // Bright Cyan
+        Color(0xFF2563EB), // Accent Blue
+        Color(0xFF4F46E5), // Indigo
+        Color(0xFF8B5CF6), // Purple
+      ],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ).createShader(rect);
 
-    // Draw second interlocking loop (Right)
-    paint.color = accentColor;
-    canvas.drawCircle(Offset(cx + radius * 0.5, cy), radius, paint);
+    // Left leg of the V ribbon (curves smoothly inward and loops)
+    final Path path1 = Path();
+    path1.moveTo(w * 0.18, h * 0.22);
+    path1.cubicTo(
+      w * 0.12, h * 0.45, // First control point
+      w * 0.20, h * 0.85, // Second control point
+      w * 0.45, h * 0.82, // Base of the V
+    );
+    canvas.drawPath(path1, paint);
 
-    // Draw center core secure node
-    final Paint nodePaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill
-      ..isAntiAlias = true;
-    canvas.drawCircle(Offset(cx, cy), w * 0.05, nodePaint);
+    // Right leg of the V ribbon (sweeps upwards out with overlap)
+    final Path path2 = Path();
+    path2.moveTo(w * 0.45, h * 0.82);
+    path2.cubicTo(
+      w * 0.65, h * 0.78, // Control point 1
+      w * 0.76, h * 0.40, // Control point 2
+      w * 0.82, h * 0.22, // Top right
+    );
+    canvas.drawPath(path2, paint);
   }
 
   @override

@@ -15,6 +15,7 @@ import '../features/auth/auth_provider.dart';
 import '../features/calling/presentation/room_screen.dart';
 import '../features/calling/presentation/incoming_call_screen.dart';
 import '../features/calling/presentation/outgoing_call_screen.dart';
+import '../features/contacts/presentation/contacts_screen.dart';
 import 'main_layout.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -85,6 +86,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/home',
             builder: (context, state) => const HomeScreen(),
+          ),
+          GoRoute(
+            path: '/contacts',
+            builder: (context, state) => const ContactsScreen(),
           ),
           GoRoute(
             path: '/chats',
