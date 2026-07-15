@@ -12,12 +12,16 @@ services:
       - REDIS_PORT=6379
       - JWT_SECRET=veyl_super_secret_dev_key
       - JWT_REFRESH_SECRET=veyl_super_secret_refresh_dev_key
+      - FIREBASE_SERVICE_ACCOUNT_PATH=${FIREBASE_SERVICE_ACCOUNT_PATH}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_SERVICE_ACCOUNT_JSON=${FIREBASE_SERVICE_ACCOUNT_JSON}
     depends_on:
       - postgres
       - redis
     volumes:
       - ./backend/src:/usr/src/app/src
       - ./backend/public:/usr/src/app/public
+      - ./backend/.env:/usr/src/app/.env
 
   postgres:
     image: postgres:15-alpine
