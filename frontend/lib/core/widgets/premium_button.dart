@@ -7,6 +7,7 @@ class PremiumButton extends StatefulWidget {
   final Color? foregroundColor;
   final double borderRadius;
   final double height;
+  final bool isOutline;
 
   const PremiumButton({
     super.key,
@@ -16,6 +17,7 @@ class PremiumButton extends StatefulWidget {
     this.foregroundColor,
     this.borderRadius = 18.0,
     this.height = 56.0,
+    this.isOutline = false,
   });
 
   @override
@@ -56,10 +58,29 @@ class _PremiumButtonState extends State<PremiumButton> with SingleTickerProvider
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     
-    final bg = widget.backgroundColor ?? 
-        (isDark ? theme.colorScheme.primary : theme.colorScheme.primary);
-    final fg = widget.foregroundColor ?? 
-        (isDark ? theme.scaffoldBackgroundColor : Colors.white);
+    // Core color calculations
+    final defaultBg = isDark ? theme.colorScheme.primary : theme.colorScheme.primary;
+    final defaultFg = isDark ? theme.scaffoldBackgroundColor : Colors.white;
+
+    final baseBg = widget.backgroundColor ?? defaultBg;
+    final baseFg = widget.foregroundColor ?? (widget.isOutline ? (isDark ? Colors.white : theme.colorScheme.primary) : defaultFg);
+
+    Color containerColor;
+    Border? border;
+
+    if (widget.isOutline) {
+      containerColor = _isHovered ? baseBg.withOpacity(0.08) : Colors.transparent;
+      border = Border.all(
+        color: _isHovered 
+            ? baseBg.withOpacity(0.6) 
+            : (isDark ? Colors.white24 : theme.dividerColor),
+        width: 1.5,
+      );
+    } else {
+      containerColor = widget.onPressed == null
+          ? baseBg.withOpacity(0.4)
+          : (_isHovered ? baseBg.withOpacity(0.9) : baseBg);
+    }
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -86,15 +107,14 @@ class _PremiumButtonState extends State<PremiumButton> with SingleTickerProvider
                 duration: const Duration(milliseconds: 150),
                 height: widget.height,
                 decoration: BoxDecoration(
-                  color: widget.onPressed == null
-                      ? bg.withOpacity(0.4)
-                      : (_isHovered ? bg.withOpacity(0.9) : bg),
+                  color: containerColor,
                   borderRadius: BorderRadius.circular(widget.borderRadius),
-                  boxShadow: widget.onPressed == null
+                  border: border,
+                  boxShadow: widget.onPressed == null || widget.isOutline
                       ? []
                       : [
                           BoxShadow(
-                            color: bg.withOpacity(isDark ? 0.15 : 0.08),
+                            color: baseBg.withOpacity(isDark ? 0.15 : 0.08),
                             blurRadius: 16,
                             offset: const Offset(0, 4),
                           )
@@ -107,7 +127,7 @@ class _PremiumButtonState extends State<PremiumButton> with SingleTickerProvider
           },
           child: DefaultTextStyle(
             style: TextStyle(
-              color: fg,
+              color: baseFg,
               fontSize: 16,
               fontWeight: FontWeight.bold,
               letterSpacing: -0.2,

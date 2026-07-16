@@ -407,29 +407,10 @@ class HomeScreen extends ConsumerWidget {
     required bool isDark,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
+    return HoverAppBarAction(
+      icon: icon,
+      isDark: isDark,
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: isDark ? Colors.white.withOpacity(0.06) : Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: isDark
-              ? []
-              : [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  )
-                ],
-          border: Border.all(
-            color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
-            width: 1,
-          ),
-        ),
-        child: Icon(icon, color: isDark ? Colors.white : const Color(0xFF0F172A), size: 20),
-      ),
     );
   }
 
@@ -439,29 +420,11 @@ class HomeScreen extends ConsumerWidget {
     required VoidCallback onTap,
     required ThemeData theme,
   }) {
-    return GestureDetector(
+    return HoverQuickAction(
+      icon: icon,
+      label: label,
       onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.secondary.withOpacity(0.08),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: theme.colorScheme.secondary, size: 22),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: theme.textTheme.bodyMedium?.color?.withOpacity(0.8),
-            ),
-          ),
-        ],
-      ),
+      theme: theme,
     );
   }
 
@@ -612,19 +575,10 @@ class HomeScreen extends ConsumerWidget {
     required VoidCallback onTap,
   }) {
     final avatarUrl = 'https://i.pravatar.cc/150?u=$username';
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.04) : const Color(0xFFF3F4F6),
-          width: 1,
-        ),
-      ),
+    return HoverChatTile(
+      onTap: onTap,
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        onTap: onTap,
         leading: CircleAvatar(
           radius: 24,
           backgroundImage: NetworkImage(avatarUrl),
@@ -676,6 +630,197 @@ class HomeScreen extends ConsumerWidget {
             else if (isMuted)
               Icon(Icons.volume_off_outlined, size: 16, color: Colors.grey[400]),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// -------------------------------------------------------------
+// Veyl Design System Premium Stateful Hover Interaction Widgets
+// -------------------------------------------------------------
+
+class HoverAppBarAction extends StatefulWidget {
+  final IconData icon;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const HoverAppBarAction({
+    super.key,
+    required this.icon,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  State<HoverAppBarAction> createState() => _HoverAppBarActionState();
+}
+
+class _HoverAppBarActionState extends State<HoverAppBarAction> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _isHovered ? 1.1 : 1.0,
+          duration: const Duration(milliseconds: 150),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: widget.isDark 
+                  ? (Colors.white.withOpacity(_isHovered ? 0.12 : 0.06)) 
+                  : (_isHovered ? Colors.grey[100] : Colors.white),
+              shape: BoxShape.circle,
+              boxShadow: widget.isDark
+                  ? []
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      )
+                    ],
+              border: Border.all(
+                color: widget.isDark 
+                    ? Colors.white10 
+                    : (_isHovered ? theme.colorScheme.secondary.withOpacity(0.3) : const Color(0xFFE5E7EB)),
+                width: 1,
+              ),
+            ),
+            child: Icon(widget.icon, color: widget.isDark ? Colors.white : const Color(0xFF0F172A), size: 20),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class HoverQuickAction extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final ThemeData theme;
+
+  const HoverQuickAction({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    required this.theme,
+  });
+
+  @override
+  State<HoverQuickAction> createState() => _HoverQuickActionState();
+}
+
+class _HoverQuickActionState extends State<HoverQuickAction> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = widget.theme;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _isHovered ? 1.08 : 1.0,
+          duration: const Duration(milliseconds: 150),
+          child: Column(
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.secondary.withOpacity(_isHovered ? 0.16 : 0.08),
+                  shape: BoxShape.circle,
+                  boxShadow: _isHovered 
+                      ? [BoxShadow(color: theme.colorScheme.secondary.withOpacity(0.15), blurRadius: 12, offset: const Offset(0, 4))]
+                      : [],
+                ),
+                child: Icon(widget.icon, color: theme.colorScheme.secondary, size: 22),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                widget.label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: theme.textTheme.bodyMedium?.color?.withOpacity(_isHovered ? 1.0 : 0.8),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class HoverChatTile extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+
+  const HoverChatTile({
+    super.key,
+    required this.child,
+    required this.onTap,
+  });
+
+  @override
+  State<HoverChatTile> createState() => _HoverChatTileState();
+}
+
+class _HoverChatTileState extends State<HoverChatTile> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _isHovered ? 1.015 : 1.0,
+          duration: const Duration(milliseconds: 150),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: _isHovered 
+                  ? (isDark ? const Color(0xFF1E293B) : Colors.grey[100])
+                  : theme.cardColor,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: _isHovered
+                    ? theme.colorScheme.secondary.withOpacity(0.3)
+                    : (isDark ? Colors.white.withOpacity(0.04) : const Color(0xFFF3F4F6)),
+                width: 1,
+              ),
+              boxShadow: _isHovered
+                  ? [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(isDark ? 0.15 : 0.03),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      )
+                    ]
+                  : [],
+            ),
+            child: widget.child,
+          ),
         ),
       ),
     );

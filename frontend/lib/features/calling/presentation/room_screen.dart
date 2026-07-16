@@ -68,7 +68,6 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final profileAsync = ref.watch(userProfileProvider);
     final currentUserId = profileAsync.value?['userId'] ?? '';
     final currentUsername = profileAsync.value?['username'] ?? 'Guest';
@@ -310,7 +309,6 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
                     );
                   } else {
                     // Guests join in audio-muted listener mode (can only listen to the presenter)
-                    final guestAvatar = profileAsync.value?['profilePhotoUrl'] ?? '';
                     final cleanRoom = widget.roomId.replaceAll(RegExp(r'[^a-zA-Z0-9-]'), '');
                     final urlString = 'https://meet.jit.si/veyl-$cleanRoom#userInfo.displayName="$currentUsername"&config.startWithAudioMuted=true&config.startWithVideoMuted=true';
                     final Uri url = Uri.parse(urlString);

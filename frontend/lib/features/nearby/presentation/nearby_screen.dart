@@ -307,15 +307,15 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const SizedBox(
-                                  width: 48,
-                                  height: 48,
-                                  child: CircularProgressIndicator(strokeWidth: 2.5),
-                                ),
-                                const SizedBox(height: 20),
+                                const SonarRadarWidget(),
+                                const SizedBox(height: 24),
                                 Text(
                                   'Scanning for offline users...',
-                                  style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                                  style: TextStyle(
+                                    color: isDark ? Colors.white54 : Colors.grey[500],
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ],
                             ),
@@ -325,17 +325,7 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
                             itemCount: _peers.length,
                             itemBuilder: (context, index) {
                               final peer = _peers[index];
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: theme.cardColor,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: isDark ? Colors.white10 : theme.dividerColor.withOpacity(0.5),
-                                    width: 1,
-                                  ),
-                                ),
+                              return HoverPeerCard(
                                 child: Row(
                                   children: [
                                     Expanded(
@@ -384,6 +374,145 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+// -------------------------------------------------------------
+// Veyl Design System Premium Sonar Pulsing Scan & Hover Widgets
+// -------------------------------------------------------------
+
+class SonarRadarWidget extends StatefulWidget {
+  const SonarRadarWidget({super.key});
+
+  @override
+  State<SonarRadarWidget> createState() => _SonarRadarWidgetState();
+}
+
+class _SonarRadarWidgetState extends State<SonarRadarWidget> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return CustomPaint(
+          size: const Size(120, 120),
+          painter: _SonarPainter(_controller.value, theme.colorScheme.secondary),
+        );
+      },
+    );
+  }
+}
+
+class _SonarPainter extends CustomPainter {
+  final double progress;
+  final Color color;
+
+  _SonarPainter(this.progress, this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final maxRadius = size.width / 2;
+
+    for (int i = 0; i < 3; i++) {
+      final waveProgress = (progress + i / 3.0) % 1.0;
+      final radius = waveProgress * maxRadius;
+      final opacity = 1.0 - waveProgress;
+
+      final paint = Paint()
+        ..color = color.withOpacity(opacity * 0.25)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0;
+
+      canvas.drawCircle(center, radius, paint);
+
+      final fillPaint = Paint()
+        ..color = color.withOpacity(opacity * 0.05)
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(center, radius, fillPaint);
+    }
+
+    // Core pulsing dot
+    final corePaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, 6.0, corePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class HoverPeerCard extends StatefulWidget {
+  final Widget child;
+
+  const HoverPeerCard({super.key, required this.child});
+
+  @override
+  State<HoverPeerCard> createState() => _HoverPeerCardState();
+}
+
+class _HoverPeerCardState extends State<HoverPeerCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedScale(
+        scale: _isHovered ? 1.02 : 1.0,
+        duration: const Duration(milliseconds: 150),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: _isHovered 
+                ? (isDark ? const Color(0xFF1E293B) : Colors.grey[100])
+                : theme.cardColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: _isHovered
+                  ? theme.colorScheme.secondary.withOpacity(0.4)
+                  : (isDark ? Colors.white10 : theme.dividerColor.withOpacity(0.5)),
+              width: 1,
+            ),
+            boxShadow: _isHovered
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    )
+                  ]
+                : [],
+          ),
+          child: widget.child,
+        ),
       ),
     );
   }

@@ -107,28 +107,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 16),
                 
                 // Secondary Sign In Button
-                GestureDetector(
-                  onTap: () => _showSignInBottomSheet(context),
-                  child: Container(
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: isDark ? Colors.white24 : theme.dividerColor,
-                        width: 1.5,
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      'Sign In',
-                      style: TextStyle(
-                        color: isDark ? Colors.white : theme.colorScheme.primary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+                PremiumButton(
+                  isOutline: true,
+                  onPressed: () => _showSignInBottomSheet(context),
+                  child: const Text('Sign In'),
                 ),
                 
                 const SizedBox(height: 20),
