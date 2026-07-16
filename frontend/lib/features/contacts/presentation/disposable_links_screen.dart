@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../core/api_client.dart';
 import '../../../core/widgets/premium_button.dart';
 
@@ -144,7 +145,6 @@ class _DisposableLinksScreenState extends ConsumerState<DisposableLinksScreen> w
               ),
               const SizedBox(height: 20),
 
-              // Action Link Input
               TextField(
                 readOnly: true,
                 style: const TextStyle(fontSize: 13),
@@ -162,6 +162,27 @@ class _DisposableLinksScreenState extends ConsumerState<DisposableLinksScreen> w
                   ),
                 ),
                 controller: TextEditingController(text: fullUrl),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      icon: const Icon(Icons.share, size: 16),
+                      label: const Text('Share Invite Link'),
+                      onPressed: () {
+                        Share.share(
+                          'Connect with me on Veyl using this disposable invite link:\n$fullUrl',
+                          subject: 'Veyl Private Invite Link',
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

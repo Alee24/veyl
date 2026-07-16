@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:lottie/lottie.dart';
+import 'package:uuid/uuid.dart';
 import '../../../core/api_client.dart';
 import '../../calling/call_service.dart';
 import '../../auth/auth_provider.dart';
@@ -79,6 +80,70 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _messageController.selection = TextSelection.collapsed(offset: selection.start + emoji.length);
   }
 
+  void _initiateChatCall(BuildContext context, WidgetRef ref, {required bool isVideo}) {
+    final profileAsync = ref.read(userProfileProvider);
+    final currentUserId = profileAsync.value?['userId'] ?? '';
+    if (currentUserId.isEmpty) return;
+
+    final chatsAsync = ref.read(userChatsProvider);
+    chatsAsync.when(
+      data: (chats) {
+        final chat = chats.firstWhere(
+          (c) => c['id'] == widget.chatId,
+          orElse: () => null,
+        );
+        if (chat == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Cannot initiate call: Chat data not found.')),
+          );
+          return;
+        }
+
+        final participants = chat['participants'] as List<dynamic>;
+        final otherParticipant = participants.firstWhere(
+          (p) => p['userId'] != currentUserId,
+          orElse: () => null,
+        );
+
+        if (otherParticipant == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Cannot call: No other participants found.')),
+          );
+          return;
+        }
+
+        final otherUser = otherParticipant['user'];
+        final calleeId = otherUser['id'];
+        final calleeUsername = otherUser['username'] ?? 'user';
+        final calleeName = otherUser['displayName'] ?? calleeUsername;
+
+        if (calleeId == null) return;
+
+        final String uniqueRoom = '${isVideo ? "video" : "voice"}_call_${const Uuid().v4()}';
+
+        context.push(
+          '/outgoing_call',
+          extra: {
+            'calleeId': calleeId,
+            'calleeName': calleeName,
+            'calleeUsername': calleeUsername,
+            'roomName': uniqueRoom,
+          },
+        );
+      },
+      loading: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please wait until conversations finish loading.')),
+        );
+      },
+      error: (err, stack) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load user profile for call: $err')),
+        );
+      },
+    );
+  }
+
   String _formatMessageTime(String createdAtString) {
     try {
       final dateTime = DateTime.parse(createdAtString).toLocal();
@@ -94,7 +159,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     
     final messagesState = ref.watch(messagesProvider(widget.chatId));
     final profileAsync = ref.watch(userProfileProvider);
@@ -164,11 +228,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         actions: [
           IconButton(
             icon: Icon(Icons.call, color: theme.colorScheme.primary),
-            onPressed: () => ref.read(callServiceProvider).joinVideoCall('voice-${widget.chatId}', currentUsername, ''),
+            onPressed: () => _initiateChatCall(context, ref, isVideo: false),
           ),
           IconButton(
             icon: Icon(Icons.videocam, color: theme.colorScheme.primary),
-            onPressed: () => ref.read(callServiceProvider).joinVideoCall('video-${widget.chatId}', currentUsername, ''),
+            onPressed: () => _initiateChatCall(context, ref, isVideo: true),
           ),
         ],
       ),

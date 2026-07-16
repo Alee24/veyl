@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../calling/presentation/calls_screen.dart';
 import '../../chat/chat_provider.dart';
 import '../../auth/auth_provider.dart';
@@ -153,7 +154,6 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
                     gapless: false,
                   ),
                 ),
-                const SizedBox(height: 20),
                 TextField(
                   readOnly: true,
                   style: const TextStyle(fontSize: 12),
@@ -171,6 +171,27 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
                     ),
                   ),
                   controller: TextEditingController(text: fullUrl),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        icon: const Icon(Icons.share, size: 16),
+                        label: const Text('Share Invite Link'),
+                        onPressed: () {
+                          Share.share(
+                            'Connect with me on Veyl using this disposable invite link:\n$fullUrl',
+                            subject: 'Veyl Private Invite Link',
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -673,7 +694,7 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
             final String name = link['name'] ?? 'Temporary Invite';
             final int scans = link['currentScans'] ?? 0;
             final int? max = link['maxScans'];
-            final String rawExpiry = link['expiresAt'];
+            final String? rawExpiry = link['expiresAt'];
             String expiryLabel = 'Never';
             bool isExpiringSoon = false;
             if (rawExpiry != null) {
