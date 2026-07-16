@@ -12,10 +12,11 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     final profileAsync = ref.watch(userProfileProvider);
     final username = profileAsync.value?['username'] ?? 'guest';
     final displayName = profileAsync.value?['displayName'] ?? 'Veyl User';
+    final profilePhotoUrl = profileAsync.value?['profilePhotoUrl'] ?? '';
     final currentUserId = profileAsync.value?['userId'] ?? '';
     final chatsAsync = ref.watch(userChatsProvider);
 
@@ -42,14 +43,12 @@ class HomeScreen extends ConsumerWidget {
           ],
         ),
         actions: [
-          // Search Icon
           _buildAppBarAction(
             icon: Icons.search,
             isDark: isDark,
             onTap: () => context.push('/calls'),
           ),
           const SizedBox(width: 8),
-          // Scan Icon
           _buildAppBarAction(
             icon: Icons.qr_code_scanner,
             isDark: isDark,
@@ -70,8 +69,8 @@ class HomeScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(24),
                 gradient: const LinearGradient(
                   colors: [
-                    Color(0xFF0B132B), // Very dark navy
-                    Color(0xFF1C2541), // Deep navy
+                    Color(0xFF0B132B),
+                    Color(0xFF1C2541),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -88,7 +87,6 @@ class HomeScreen extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      // Avatar on a dark gradient background with a green dot
                       Stack(
                         children: [
                           Container(
@@ -106,12 +104,21 @@ class HomeScreen extends ConsumerWidget {
                               radius: 36,
                               backgroundColor: const Color(0xFF0B132B),
                               child: ClipOval(
-                                child: Image.network(
-                                  'https://i.pravatar.cc/150?u=$username',
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      const Icon(Icons.person, color: Colors.white),
-                                ),
+                                child: profilePhotoUrl.isNotEmpty
+                                    ? Image.network(
+                                        profilePhotoUrl,
+                                        fit: BoxFit.cover,
+                                        width: 72,
+                                        height: 72,
+                                        errorBuilder: (context, error, stackTrace) => Text(
+                                          displayName.isNotEmpty ? displayName[0].toUpperCase() : 'V',
+                                          style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold),
+                                        ),
+                                      )
+                                    : Text(
+                                        displayName.isNotEmpty ? displayName[0].toUpperCase() : 'V',
+                                        style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold),
+                                      ),
                               ),
                             ),
                           ),
@@ -122,7 +129,7 @@ class HomeScreen extends ConsumerWidget {
                               width: 15,
                               height: 15,
                               decoration: BoxDecoration(
-                                color: const Color(0xFF10B981), // Success online green
+                                color: const Color(0xFF10B981),
                                 shape: BoxShape.circle,
                                 border: Border.all(color: const Color(0xFF0B132B), width: 2),
                               ),
@@ -131,7 +138,6 @@ class HomeScreen extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(width: 16),
-                      // Text info
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -150,8 +156,12 @@ class HomeScreen extends ConsumerWidget {
                                 letterSpacing: -0.5,
                               ),
                             ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '@$username',
+                              style: const TextStyle(color: Colors.white38, fontSize: 12),
+                            ),
                             const SizedBox(height: 12),
-                            // Privacy shield row
                             Row(
                               children: [
                                 Container(
@@ -196,7 +206,6 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  // More settings dots
                   Positioned(
                     top: 0,
                     right: 0,
@@ -247,8 +256,8 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   _buildQuickActionItem(
                     icon: Icons.group_outlined,
-                    label: 'New Group',
-                    onTap: () => context.go('/chats'),
+                    label: 'Contacts',
+                    onTap: () => context.go('/contacts'),
                     theme: theme,
                   ),
                   _buildQuickActionItem(
@@ -268,55 +277,11 @@ class HomeScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
 
-            // 3. Stories Labeled Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Stories',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : const Color(0xFF0F172A),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {},
-                  child: Row(
-                    children: [
-                      Text('View all', style: TextStyle(color: theme.colorScheme.secondary, fontWeight: FontWeight.w600)),
-                      Icon(Icons.chevron_right, size: 16, color: theme.colorScheme.secondary),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
+            // 3. Disposable Contact Banner
+            _buildDisposableBanner(context, theme, isDark),
+            const SizedBox(height: 24),
 
-            // Stories Horizontal List
-            SizedBox(
-              height: 100,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                children: [
-                  // My Story (with blue plus badge)
-                  _buildStoryItem(
-                    username: username,
-                    name: 'My Story',
-                    isMe: true,
-                    isDark: isDark,
-                    theme: theme,
-                  ),
-                  _buildStoryItem(username: 'alex', name: 'Alex', isOnline: true, isDark: isDark, theme: theme),
-                  _buildStoryItem(username: 'samira', name: 'Samira', isOnline: true, isDark: isDark, theme: theme),
-                  _buildStoryItem(username: 'jordan', name: 'Jordan', isOnline: true, isDark: isDark, theme: theme),
-                  _buildStoryItem(username: 'taylor', name: 'Taylor', isOnline: true, isDark: isDark, theme: theme),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // 4. Recent Chats Section Header
+            // 4. Recent Chats Section
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -340,16 +305,15 @@ class HomeScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
 
-            // Recent Chats List (Loads real chats, falls back/blends beautiful preview data)
+            // Recent Chats — real data only, clean empty state
             chatsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => _buildPreviewChatsList(context, theme, isDark),
+              loading: () => _buildChatsShimmer(isDark),
+              error: (err, stack) => _buildChatsEmptyState(context, theme, isDark),
               data: (chats) {
                 if (chats.isEmpty) {
-                  return _buildPreviewChatsList(context, theme, isDark);
+                  return _buildChatsEmptyState(context, theme, isDark);
                 }
-                
-                // Show up to 5 real chats
+
                 final recentChats = chats.take(5).toList();
                 return Column(
                   children: recentChats.map((chat) {
@@ -359,28 +323,37 @@ class HomeScreen extends ConsumerWidget {
                       orElse: () => null,
                     );
                     if (otherParticipant == null) return const SizedBox.shrink();
-                    
+
                     final otherUser = otherParticipant['user'];
                     final String otherUsername = otherUser['username'] ?? 'User';
                     final String otherDisplayName = otherUser['displayName'] ?? otherUsername;
-                    
+                    final String otherPhotoUrl = otherUser['profilePhotoUrl'] ?? '';
+
                     final messages = chat['messages'] as List<dynamic>?;
                     final lastMsg = messages != null && messages.isNotEmpty ? messages[0] : null;
                     final String lastMessageText = lastMsg?['content'] ?? 'No messages yet';
-                    
+
                     String formatTime(String? dateStr) {
                       if (dateStr == null) return '';
                       try {
                         final date = DateTime.parse(dateStr).toLocal();
-                        final hour = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
-                        final minute = date.minute.toString().padLeft(2, '0');
-                        final period = date.hour >= 12 ? 'PM' : 'AM';
-                        return '$hour:$minute $period';
+                        final now = DateTime.now();
+                        if (date.day == now.day && date.month == now.month && date.year == now.year) {
+                          final hour = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
+                          final minute = date.minute.toString().padLeft(2, '0');
+                          final period = date.hour >= 12 ? 'PM' : 'AM';
+                          return '$hour:$minute $period';
+                        }
+                        final yesterday = now.subtract(const Duration(days: 1));
+                        if (date.day == yesterday.day && date.month == yesterday.month) {
+                          return 'Yesterday';
+                        }
+                        return '${date.day}/${date.month}';
                       } catch (_) {
                         return '';
                       }
                     }
-                    
+
                     return _buildChatTile(
                       context: context,
                       theme: theme,
@@ -389,15 +362,147 @@ class HomeScreen extends ConsumerWidget {
                       message: lastMessageText,
                       time: formatTime(lastMsg?['createdAt']),
                       unreadCount: chat['unreadCount'] ?? 0,
-                      username: otherUsername,
+                      photoUrl: otherPhotoUrl,
+                      initials: otherDisplayName.isNotEmpty ? otherDisplayName[0].toUpperCase() : 'V',
                       onTap: () => context.push('/chat/${chat['id']}'),
                     );
                   }).toList(),
                 );
               },
             ),
+            const SizedBox(height: 80), // bottom nav padding
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDisposableBanner(BuildContext context, ThemeData theme, bool isDark) {
+    return GestureDetector(
+      onTap: () => context.push('/disposable_links'),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF6366F1).withOpacity(0.25),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.link, color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Disposable Contact Links',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
+                  SizedBox(height: 3),
+                  Text(
+                    'Share temporary, expiring contact links — no phone number needed.',
+                    style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.arrow_forward_ios, color: Colors.white60, size: 14),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatsShimmer(bool isDark) {
+    return Column(
+      children: List.generate(3, (i) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          height: 72,
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(20),
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildChatsEmptyState(BuildContext context, ThemeData theme, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.secondary.withOpacity(0.08),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.chat_bubble_outline, size: 36, color: theme.colorScheme.secondary),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No conversations yet',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Start a chat with a contact or\nshare a disposable invite link.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: isDark ? Colors.white38 : Colors.grey[500], fontSize: 13, height: 1.5),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _EmptyStateButton(
+                label: 'Find Contacts',
+                icon: Icons.people_outline,
+                onTap: () => context.go('/contacts'),
+                theme: theme,
+              ),
+              const SizedBox(width: 12),
+              _EmptyStateButton(
+                label: 'Invite Link',
+                icon: Icons.link,
+                onTap: () => context.push('/disposable_links'),
+                theme: theme,
+                filled: true,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -428,140 +533,6 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStoryItem({
-    required String username,
-    required String name,
-    bool isMe = false,
-    bool isOnline = false,
-    required bool isDark,
-    required ThemeData theme,
-  }) {
-    final avatarUrl = 'https://i.pravatar.cc/150?u=$username';
-    return Padding(
-      padding: const EdgeInsets.only(right: 16.0),
-      child: Column(
-        children: [
-          Stack(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(2.5),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: isMe 
-                        ? Colors.transparent 
-                        : (isOnline ? theme.colorScheme.secondary : Colors.grey.shade400),
-                    width: 2.5,
-                  ),
-                ),
-                child: CircleAvatar(
-                  radius: 26,
-                  backgroundImage: NetworkImage(avatarUrl),
-                ),
-              ),
-              if (isMe)
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.secondary,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: isDark ? const Color(0xFF0F172A) : const Color(0xFFFAFAFB), width: 2),
-                    ),
-                    child: const Icon(Icons.add, size: 12, color: Colors.white),
-                  ),
-                )
-              else if (isOnline)
-                Positioned(
-                  bottom: 2,
-                  right: 2,
-                  child: Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.secondary,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: isDark ? const Color(0xFF0F172A) : const Color(0xFFFAFAFB), width: 1.5),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            name,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPreviewChatsList(BuildContext context, ThemeData theme, bool isDark) {
-    return Column(
-      children: [
-        _buildChatTile(
-          context: context,
-          theme: theme,
-          isDark: isDark,
-          name: 'Alex Morgan',
-          message: 'Let\'s catch up later today.',
-          time: '9:40 AM',
-          unreadCount: 2,
-          username: 'alex',
-          onTap: () {},
-        ),
-        _buildChatTile(
-          context: context,
-          theme: theme,
-          isDark: isDark,
-          name: 'Design Team',
-          message: 'Samira: Here\'s the latest update.',
-          time: '9:32 AM',
-          unreadCount: 0,
-          username: 'team',
-          onTap: () {},
-        ),
-        _buildChatTile(
-          context: context,
-          theme: theme,
-          isDark: isDark,
-          name: 'Samira Ali',
-          message: 'The file has been sent.',
-          time: 'Yesterday',
-          unreadCount: 1,
-          username: 'samira',
-          onTap: () {},
-        ),
-        _buildChatTile(
-          context: context,
-          theme: theme,
-          isDark: isDark,
-          name: 'Jordan Lee',
-          message: '📞 Voice call • 2m 24s',
-          time: 'Yesterday',
-          unreadCount: 0,
-          username: 'jordan',
-          onTap: () {},
-        ),
-        _buildChatTile(
-          context: context,
-          theme: theme,
-          isDark: isDark,
-          name: 'Project Phoenix',
-          message: 'Taylor: On it 🚀',
-          time: 'Mon',
-          unreadCount: 0,
-          isMuted: true,
-          username: 'phoenix',
-          onTap: () {},
-        ),
-      ],
-    );
-  }
-
   Widget _buildChatTile({
     required BuildContext context,
     required ThemeData theme,
@@ -570,18 +541,35 @@ class HomeScreen extends ConsumerWidget {
     required String message,
     required String time,
     required int unreadCount,
+    required String photoUrl,
+    required String initials,
     bool isMuted = false,
-    required String username,
     required VoidCallback onTap,
   }) {
-    final avatarUrl = 'https://i.pravatar.cc/150?u=$username';
     return HoverChatTile(
       onTap: onTap,
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         leading: CircleAvatar(
           radius: 24,
-          backgroundImage: NetworkImage(avatarUrl),
+          backgroundColor: theme.colorScheme.secondary.withOpacity(0.12),
+          child: photoUrl.isNotEmpty
+              ? ClipOval(
+                  child: Image.network(
+                    photoUrl,
+                    fit: BoxFit.cover,
+                    width: 48,
+                    height: 48,
+                    errorBuilder: (context, error, stackTrace) => Text(
+                      initials,
+                      style: TextStyle(color: theme.colorScheme.secondary, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                )
+              : Text(
+                  initials,
+                  style: TextStyle(color: theme.colorScheme.secondary, fontWeight: FontWeight.bold),
+                ),
         ),
         title: Text(
           name,
@@ -594,8 +582,8 @@ class HomeScreen extends ConsumerWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: unreadCount > 0 
-                  ? (isDark ? Colors.white70 : Colors.black87) 
+              color: unreadCount > 0
+                  ? (isDark ? Colors.white70 : Colors.black87)
                   : Colors.grey[500],
               fontSize: 13,
               fontWeight: unreadCount > 0 ? FontWeight.w600 : FontWeight.normal,
@@ -629,6 +617,58 @@ class HomeScreen extends ConsumerWidget {
               )
             else if (isMuted)
               Icon(Icons.volume_off_outlined, size: 16, color: Colors.grey[400]),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// -------------------------------------------------------------
+// Small inline button for empty state
+// -------------------------------------------------------------
+class _EmptyStateButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+  final ThemeData theme;
+  final bool filled;
+
+  const _EmptyStateButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+    required this.theme,
+    this.filled = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: filled ? theme.colorScheme.secondary : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: theme.colorScheme.secondary,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: filled ? Colors.white : theme.colorScheme.secondary),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: filled ? Colors.white : theme.colorScheme.secondary,
+              ),
+            ),
           ],
         ),
       ),
@@ -674,8 +714,8 @@ class _HoverAppBarActionState extends State<HoverAppBarAction> {
             duration: const Duration(milliseconds: 150),
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: widget.isDark 
-                  ? (Colors.white.withOpacity(_isHovered ? 0.12 : 0.06)) 
+              color: widget.isDark
+                  ? (Colors.white.withOpacity(_isHovered ? 0.12 : 0.06))
                   : (_isHovered ? Colors.grey[100] : Colors.white),
               shape: BoxShape.circle,
               boxShadow: widget.isDark
@@ -688,8 +728,8 @@ class _HoverAppBarActionState extends State<HoverAppBarAction> {
                       )
                     ],
               border: Border.all(
-                color: widget.isDark 
-                    ? Colors.white10 
+                color: widget.isDark
+                    ? Colors.white10
                     : (_isHovered ? theme.colorScheme.secondary.withOpacity(0.3) : const Color(0xFFE5E7EB)),
                 width: 1,
               ),
@@ -742,7 +782,7 @@ class _HoverQuickActionState extends State<HoverQuickAction> {
                 decoration: BoxDecoration(
                   color: theme.colorScheme.secondary.withOpacity(_isHovered ? 0.16 : 0.08),
                   shape: BoxShape.circle,
-                  boxShadow: _isHovered 
+                  boxShadow: _isHovered
                       ? [BoxShadow(color: theme.colorScheme.secondary.withOpacity(0.15), blurRadius: 12, offset: const Offset(0, 4))]
                       : [],
                 ),
@@ -799,7 +839,7 @@ class _HoverChatTileState extends State<HoverChatTile> {
             duration: const Duration(milliseconds: 150),
             margin: const EdgeInsets.only(bottom: 8),
             decoration: BoxDecoration(
-              color: _isHovered 
+              color: _isHovered
                   ? (isDark ? const Color(0xFF1E293B) : Colors.grey[100])
                   : theme.cardColor,
               borderRadius: BorderRadius.circular(20),
