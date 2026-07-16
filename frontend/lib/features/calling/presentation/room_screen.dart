@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/api_client.dart';
 import '../../auth/auth_provider.dart';
 import '../call_service.dart';
 import '../room_provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class RoomScreen extends ConsumerStatefulWidget {
   final String roomId;
@@ -300,24 +300,33 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
                   style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 onPressed: () async {
+                  final callService = ref.read(callServiceProvider);
+                  // Request permissions before joining any call mode
+                  final hasPermission = await callService.requestCallPermissions(context);
+                  if (!hasPermission) return;
+
                   if (isPresenter) {
                     // Presenter joins with audio and video enabled
-                    await ref.read(callServiceProvider).joinVideoCall(
+                    await callService.joinVideoCall(
                       widget.roomId,
                       currentUsername,
                       presenterAvatar,
                     );
                   } else {
-                    // Guests join in audio-muted listener mode (can only listen to the presenter)
+                    // Guests join in audio-muted listener mode
                     final cleanRoom = widget.roomId.replaceAll(RegExp(r'[^a-zA-Z0-9-]'), '');
-                    final urlString = 'https://meet.jit.si/veyl-$cleanRoom#userInfo.displayName="$currentUsername"&config.startWithAudioMuted=true&config.startWithVideoMuted=true';
+                    final urlString =
+                        'https://meet.jit.si/veyl-$cleanRoom'
+                        '#userInfo.displayName="$currentUsername"'
+                        '&config.startWithAudioMuted=true'
+                        '&config.startWithVideoMuted=true'
+                        '&config.prejoinPageEnabled=false';
                     final Uri url = Uri.parse(urlString);
-                    
                     if (await canLaunchUrl(url)) {
                       await launchUrl(url, mode: LaunchMode.externalApplication);
-                    } else {
+                    } else if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Could not join the stream')),
+                        const SnackBar(content: Text('Could not join the stream. Please check your browser settings.')),
                       );
                     }
                   }

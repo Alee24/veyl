@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'dart:async';
 import '../../chat/socket_service.dart';
 import '../call_service.dart';
@@ -35,6 +36,7 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen> {
   void initState() {
     super.initState();
     _audioPlayer = AudioPlayer();
+    _requestNotificationPermission();
     _startRingingAndVibration();
 
     // Listen for call cancellation from the caller
@@ -48,6 +50,10 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen> {
         );
       }
     });
+  }
+
+  void _requestNotificationPermission() async {
+    await Permission.notification.request();
   }
 
   void _startRingingAndVibration() async {
@@ -85,6 +91,11 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen> {
   }
 
   void _acceptCall() async {
+    // Request camera + mic permissions before joining
+    final callService = ref.read(callServiceProvider);
+    final hasPermission = await callService.requestCallPermissions(context);
+    if (!hasPermission) return; // Stop if denied
+
     ref.read(socketServiceProvider).acceptCall(widget.callerId);
     _stopRingingAndVibration();
     
@@ -92,9 +103,9 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen> {
     final profileAsync = ref.read(userProfileProvider);
     final myDisplayName = profileAsync.value?['displayName'] ?? 'User';
     
-    context.pop(); // Close incoming call screen
+    if (mounted) context.pop(); // Close incoming call screen
     
-    await ref.read(callServiceProvider).joinVideoCall(
+    await callService.joinVideoCall(
       widget.roomName,
       myDisplayName,
       '',

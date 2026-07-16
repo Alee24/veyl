@@ -34,6 +34,26 @@ class _OutgoingCallScreenState extends ConsumerState<OutgoingCallScreen> {
   void initState() {
     super.initState();
     _audioPlayer = AudioPlayer();
+    _checkPermissionsThenStart();
+  }
+
+  void _checkPermissionsThenStart() async {
+    // Request camera + mic permissions BEFORE initiating the call
+    final callService = ref.read(callServiceProvider);
+    final hasPermission = await callService.requestCallPermissions(context);
+    if (!hasPermission) {
+      // Permissions denied — cancel the call and go back
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Camera and microphone access required to make calls.'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+        context.pop();
+      }
+      return;
+    }
     _startCallingProgress();
   }
 
@@ -63,7 +83,7 @@ class _OutgoingCallScreenState extends ConsumerState<OutgoingCallScreen> {
     _acceptedSubscription = socketService.onCallAccepted.listen((data) async {
       if (data['calleeId'] == widget.calleeId && mounted) {
         _stopCallingSound();
-        context.pop(); // Close outgoing screen
+        if (mounted) context.pop(); // Close outgoing screen
         
         // Launch Jitsi Meet call
         await ref.read(callServiceProvider).joinVideoCall(
@@ -77,10 +97,12 @@ class _OutgoingCallScreenState extends ConsumerState<OutgoingCallScreen> {
     _declinedSubscription = socketService.onCallDeclined.listen((data) {
       if (data['calleeId'] == widget.calleeId && mounted) {
         _stopCallingSound();
-        context.pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Call declined')),
-        );
+        if (mounted) {
+          context.pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Call was declined')),
+          );
+        }
       }
     });
   }
