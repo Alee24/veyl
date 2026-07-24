@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../auth/auth_provider.dart';
 import '../chat_provider.dart';
+import '../../../core/api_client.dart';
 
 class ChatListScreen extends ConsumerWidget {
   const ChatListScreen({super.key});
@@ -183,12 +184,10 @@ class ChatListScreen extends ConsumerWidget {
                       orElse: () => null,
                     );
                     
-                    if (otherParticipant == null) return const SizedBox.shrink();
-                    
                     final otherUser = otherParticipant['user'];
                     final String otherUsername = otherUser['username'] ?? 'User';
                     final String otherDisplayName = otherUser['displayName'] ?? otherUsername;
-                    final String avatarUrl = 'https://i.pravatar.cc/150?u=$otherUsername';
+                    final String avatarUrl = getAvatarUrl(otherUser['profilePhotoUrl'], otherUsername);
                     
                     // Last message details
                     final messages = chat['messages'] as List<dynamic>?;

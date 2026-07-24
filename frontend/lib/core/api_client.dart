@@ -43,3 +43,12 @@ final dioProvider = Provider<Dio>((ref) {
 
   return dio;
 });
+
+String getAvatarUrl(String? photoUrl, [String fallbackSeed = 'user']) {
+  if (photoUrl != null && photoUrl.isNotEmpty) {
+    if (photoUrl.startsWith('http')) return photoUrl;
+    if (photoUrl.startsWith('/')) return '${getBaseUrl()}$photoUrl';
+    return '${getBaseUrl()}/$photoUrl';
+  }
+  return 'https://api.dicebear.com/7.x/bottts/png?seed=$fallbackSeed';
+}

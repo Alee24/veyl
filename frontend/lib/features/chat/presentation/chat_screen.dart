@@ -162,31 +162,40 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     
     final messagesState = ref.watch(messagesProvider(widget.chatId));
     final profileAsync = ref.watch(userProfileProvider);
+    final chatsAsync = ref.watch(userChatsProvider);
     
     final currentUserId = profileAsync.value?['userId'] ?? '';
-    final currentUsername = profileAsync.value?['username'] ?? 'Guest';
     
-    String displayName = widget.chatId;
-    String avatarUrl = 'https://i.pravatar.cc/150?u=default';
+    String displayName = 'Chat';
+    String avatarUrl = getAvatarUrl(null, widget.chatId);
 
-    if (widget.chatId == 'sarah-johnson') {
-      displayName = 'Sarah Johnson';
-      avatarUrl = 'https://i.pravatar.cc/150?u=1';
-    } else if (widget.chatId == 'design-team') {
-      displayName = 'Design Team';
-      avatarUrl = 'https://i.pravatar.cc/150?u=2';
-    } else if (widget.chatId == 'mike-williams') {
-      displayName = 'Mike Williams';
-      avatarUrl = 'https://i.pravatar.cc/150?u=3';
-    } else if (widget.chatId == 'project-galaxy') {
-      displayName = 'Project Galaxy';
-      avatarUrl = 'https://i.pravatar.cc/150?u=4';
-    } else {
-      displayName = widget.chatId.split('-').map((word) => word.isNotEmpty ? '${word[0].toUpperCase()}${word.substring(1)}' : '').join(' ');
-      avatarUrl = 'https://i.pravatar.cc/150?u=${widget.chatId}';
-    }
+    chatsAsync.whenData((chats) {
+      final chat = chats.firstWhere(
+        (c) => c['id'] == widget.chatId,
+        orElse: () => null,
+      );
+      if (chat != null) {
+        final participants = chat['participants'] as List<dynamic>?;
+        if (participants != null) {
+          final otherParticipant = participants.firstWhere(
+            (p) => p['userId'] != currentUserId,
+            orElse: () => null,
+          );
+          if (otherParticipant != null && otherParticipant['user'] != null) {
+            final otherUser = otherParticipant['user'];
+            displayName = otherUser['displayName'] ?? otherUser['username'] ?? 'User';
+            avatarUrl = getAvatarUrl(otherUser['profilePhotoUrl'], otherUser['username'] ?? 'user');
+          }
+        }
+      }
+    });
 
-    final commonEmojis = ['😀', '😂', '👍', '❤️', '🔥', '🙌', '🎉', '😎', '😢', '😮', '🙏', '✨'];
+    final commonEmojis = [
+      '😀', '😂', '👍', '❤️', '🔥', '🙌', '🎉', '😎', '😢', '😮',
+      '🙏', '✨', '😍', '🥳', '🤩', '💩', '🤡', '🚀', '💯', '⚡',
+      '💥', '😴', '🤮', '😡', '😱', '👻', '💀', '👋', '👏', '🤝',
+      '🤗', '🤔', '😜', '😇', '🤖', '👑'
+    ];
 
     return Scaffold(
       appBar: AppBar(
@@ -434,6 +443,30 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         '😮': '1f62e',
         '🙏': '1f64f',
         '✨': '2728',
+        '😍': '1f60d',
+        '🥳': '1f973',
+        '🤩': '1f929',
+        '💩': '1f4a9',
+        '🤡': '1f921',
+        '🚀': '1f680',
+        '💯': '1f4af',
+        '⚡': '26a1',
+        '💥': '1f4a5',
+        '😴': '1f634',
+        '🤮': '1f92e',
+        '😡': '1f621',
+        '😱': '1f631',
+        '👻': '1f47b',
+        '💀': '1f480',
+        '👋': '1f44b',
+        '👏': '1f44f',
+        '🤝': '1f91d',
+        '🤗': '1f917',
+        '🤔': '1f914',
+        '😜': '1f61c',
+        '😇': '1f607',
+        '🤖': '1f916',
+        '👑': '1f451',
       };
       
       if (animatedEmojiMap.containsKey(trimmed)) {

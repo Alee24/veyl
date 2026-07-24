@@ -124,6 +124,13 @@ class SocketService {
     });
   }
 
+  void broadcastMessage(String chatId, dynamic message) {
+    _socket?.emit('send_message', {
+      'chatId': chatId,
+      'message': message,
+    });
+  }
+
   void sendTyping(String chatId, bool isTyping) {
     _socket?.emit('typing', {
       'chatId': chatId,

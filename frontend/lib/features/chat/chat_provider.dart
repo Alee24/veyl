@@ -145,8 +145,8 @@ class MessagesNotifier extends StateNotifier<MessagesState> {
         isLoading: false,
       );
 
-      // Broadcast over Socket
-      _socketService.sendMessage(_chatId, content, type);
+      // Broadcast over Socket to other participants
+      _socketService.broadcastMessage(_chatId, actualMsg);
     } catch (e) {
       state = MessagesState(
         messages: state.messages.map((m) => m['id'] == tempId ? {...m, 'status': 'FAILED'} : m).toList(),
