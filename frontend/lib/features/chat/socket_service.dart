@@ -30,6 +30,19 @@ class SocketService {
   final StreamController<Map<String, dynamic>> _callCancelledController = StreamController.broadcast();
   Stream<Map<String, dynamic>> get onCallCancelled => _callCancelledController.stream;
 
+  // WebRTC Signaling Streams
+  final StreamController<Map<String, dynamic>> _webrtcOfferController = StreamController.broadcast();
+  Stream<Map<String, dynamic>> get onWebRTCOffer => _webrtcOfferController.stream;
+
+  final StreamController<Map<String, dynamic>> _webrtcAnswerController = StreamController.broadcast();
+  Stream<Map<String, dynamic>> get onWebRTCAnswer => _webrtcAnswerController.stream;
+
+  final StreamController<Map<String, dynamic>> _webrtcIceCandidateController = StreamController.broadcast();
+  Stream<Map<String, dynamic>> get onWebRTCIceCandidate => _webrtcIceCandidateController.stream;
+
+  final StreamController<Map<String, dynamic>> _callEndedController = StreamController.broadcast();
+  Stream<Map<String, dynamic>> get onCallEnded => _callEndedController.stream;
+
   SocketService(this._ref);
 
   IO.Socket? get socket => _socket;
@@ -76,6 +89,22 @@ class SocketService {
 
     _socket!.on('call_cancelled', (data) {
       _callCancelledController.add(Map<String, dynamic>.from(data));
+    });
+
+    _socket!.on('webrtc_offer', (data) {
+      _webrtcOfferController.add(Map<String, dynamic>.from(data));
+    });
+
+    _socket!.on('webrtc_answer', (data) {
+      _webrtcAnswerController.add(Map<String, dynamic>.from(data));
+    });
+
+    _socket!.on('webrtc_ice_candidate', (data) {
+      _webrtcIceCandidateController.add(Map<String, dynamic>.from(data));
+    });
+
+    _socket!.on('call_ended', (data) {
+      _callEndedController.add(Map<String, dynamic>.from(data));
     });
   }
 
@@ -131,6 +160,33 @@ class SocketService {
 
   void cancelCall(String targetUserId) {
     _socket?.emit('cancel_call', {
+      'targetUserId': targetUserId,
+    });
+  }
+
+  void sendWebRTCOffer(String targetUserId, dynamic sdp) {
+    _socket?.emit('webrtc_offer', {
+      'targetUserId': targetUserId,
+      'sdp': sdp,
+    });
+  }
+
+  void sendWebRTCAnswer(String targetUserId, dynamic sdp) {
+    _socket?.emit('webrtc_answer', {
+      'targetUserId': targetUserId,
+      'sdp': sdp,
+    });
+  }
+
+  void sendWebRTCIceCandidate(String targetUserId, dynamic candidate) {
+    _socket?.emit('webrtc_ice_candidate', {
+      'targetUserId': targetUserId,
+      'candidate': candidate,
+    });
+  }
+
+  void endCall(String targetUserId) {
+    _socket?.emit('end_call', {
       'targetUserId': targetUserId,
     });
   }

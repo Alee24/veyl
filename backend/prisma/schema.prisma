@@ -40,6 +40,7 @@ model User {
   receivedCalls      Call[]            @relation("Receiver")
   createdRooms       Room[]
   temporaryLinks     TemporaryLink[]
+  deviceTokens       DeviceToken[]
 }
 
 model Session {
@@ -196,4 +197,13 @@ model OfflineQueue {
   status    String    @default("PENDING") // PENDING, SYNCED
   createdAt DateTime  @default(now())
   syncedAt  DateTime?
+}
+
+model DeviceToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fcmToken  String   @unique
+  platform  String   // "android" | "ios" | "web"
+  updatedAt DateTime @updatedAt
 }

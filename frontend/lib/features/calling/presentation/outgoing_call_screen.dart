@@ -89,15 +89,17 @@ class _OutgoingCallScreenState extends ConsumerState<OutgoingCallScreen> {
     _acceptedSubscription = socketService.onCallAccepted.listen((data) async {
       if (data['calleeId'] == widget.calleeId && mounted) {
         _stopCallingSound();
-        if (mounted) context.pop(); // Close outgoing screen
+        final isVideo = widget.roomName.startsWith('video');
         
-        final isVideo = widget.roomName.startsWith('video_');
-        // Launch Jitsi Meet call
-        await ref.read(callServiceProvider).joinVideoCall(
-          widget.roomName,
-          myDisplayName,
-          '',
-          videoEnabled: isVideo,
+        context.pushReplacement(
+          '/active_call',
+          extra: {
+            'peerId': widget.calleeId,
+            'peerName': widget.calleeName,
+            'peerUsername': widget.calleeUsername,
+            'isVideo': isVideo,
+            'isCaller': true,
+          },
         );
       }
     });

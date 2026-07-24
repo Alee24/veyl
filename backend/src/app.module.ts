@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { ChatModule } from './chat/chat.module';
 import { RoomModule } from './room/room.module';
 import { LinksModule } from './links/links.module';
+import { CallingModule } from './calling/calling.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { LinksModule } from './links/links.module';
     ChatModule,
     RoomModule,
     LinksModule,
+    CallingModule,
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'public'),
     }),

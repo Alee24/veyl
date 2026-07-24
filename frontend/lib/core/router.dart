@@ -13,8 +13,10 @@ import '../features/calling/presentation/calls_screen.dart';
 import '../features/profile/presentation/settings_screen.dart';
 import '../features/auth/auth_provider.dart';
 import '../features/calling/presentation/room_screen.dart';
-import '../features/calling/presentation/incoming_call_screen.dart';
+import '../webrtc/screens/incoming_call_screen.dart';
 import '../features/calling/presentation/outgoing_call_screen.dart';
+import '../webrtc/screens/active_call_screen.dart';
+import '../webrtc/screens/call_history_screen.dart';
 import '../features/contacts/presentation/contacts_screen.dart';
 import '../features/contacts/presentation/disposable_links_screen.dart';
 import '../features/contacts/presentation/claim_link_screen.dart';
@@ -29,7 +31,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final isLoggingIn = state.matchedLocation == '/login' || state.matchedLocation == '/register';
       final isRoomRoute = state.matchedLocation.startsWith('/room/');
-      final isCallRoute = state.matchedLocation == '/incoming_call' || state.matchedLocation == '/outgoing_call';
+      final isCallRoute = state.matchedLocation == '/incoming_call' || state.matchedLocation == '/outgoing_call' || state.matchedLocation == '/active_call';
       if (!authState && !isLoggingIn && !isRoomRoute && !isCallRoute) return '/login';
       if (authState && isLoggingIn) return '/home';
       return null;
@@ -64,6 +66,19 @@ final routerProvider = Provider<GoRouter>((ref) {
             calleeName: data['calleeName'],
             calleeUsername: data['calleeUsername'],
             roomName: data['roomName'],
+          );
+        },
+      ),
+      GoRoute(
+        path: '/active_call',
+        builder: (context, state) {
+          final data = state.extra as Map<String, dynamic>;
+          return ActiveCallScreen(
+            peerId: data['peerId'],
+            peerName: data['peerName'],
+            peerUsername: data['peerUsername'],
+            isVideo: data['isVideo'] ?? false,
+            isCaller: data['isCaller'] ?? false,
           );
         },
       ),

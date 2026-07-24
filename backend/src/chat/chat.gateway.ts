@@ -128,4 +128,47 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       callerId: client.data.user.sub,
     });
   }
+
+  @SubscribeMessage('webrtc_offer')
+  handleWebRTCOffer(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { targetUserId: string; sdp: any }
+  ) {
+    this.server.to(payload.targetUserId).emit('webrtc_offer', {
+      senderId: client.data.user.sub,
+      sdp: payload.sdp,
+    });
+  }
+
+  @SubscribeMessage('webrtc_answer')
+  handleWebRTCAnswer(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { targetUserId: string; sdp: any }
+  ) {
+    this.server.to(payload.targetUserId).emit('webrtc_answer', {
+      senderId: client.data.user.sub,
+      sdp: payload.sdp,
+    });
+  }
+
+  @SubscribeMessage('webrtc_ice_candidate')
+  handleWebRTCIceCandidate(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { targetUserId: string; candidate: any }
+  ) {
+    this.server.to(payload.targetUserId).emit('webrtc_ice_candidate', {
+      senderId: client.data.user.sub,
+      candidate: payload.candidate,
+    });
+  }
+
+  @SubscribeMessage('end_call')
+  handleEndCall(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { targetUserId: string }
+  ) {
+    this.server.to(payload.targetUserId).emit('call_ended', {
+      senderId: client.data.user.sub,
+    });
+  }
 }

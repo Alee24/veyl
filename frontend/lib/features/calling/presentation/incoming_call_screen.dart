@@ -92,7 +92,7 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen> {
 
   void _acceptCall() async {
     final callService = ref.read(callServiceProvider);
-    final isVideo = widget.roomName.startsWith('video_');
+    final isVideo = widget.roomName.startsWith('video');
 
     // Request permissions based on call type
     final hasPermission = isVideo 
@@ -103,18 +103,18 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen> {
     ref.read(socketServiceProvider).acceptCall(widget.callerId);
     _stopRingingAndVibration();
     
-    // Launch Jitsi Meet call
-    final profileAsync = ref.read(userProfileProvider);
-    final myDisplayName = profileAsync.value?['displayName'] ?? 'User';
-    
-    if (mounted) context.pop();
-    
-    await callService.joinVideoCall(
-      widget.roomName,
-      myDisplayName,
-      '',
-      videoEnabled: isVideo,
-    );
+    if (mounted) {
+      context.pushReplacement(
+        '/active_call',
+        extra: {
+          'peerId': widget.callerId,
+          'peerName': widget.callerName,
+          'peerUsername': widget.callerUsername,
+          'isVideo': isVideo,
+          'isCaller': false,
+        },
+      );
+    }
   }
 
   @override
