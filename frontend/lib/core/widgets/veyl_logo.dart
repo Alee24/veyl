@@ -195,9 +195,11 @@ class _VeylLogoWidgetState extends State<VeylLogoWidget> with TickerProviderStat
                         ..rotateZ(currentRotation)
                         ..scale(currentScale),
                       alignment: Alignment.center,
-                      child: CustomPaint(
-                        size: Size(widget.size, widget.size),
-                        painter: _VeylLogoPainter(),
+                      child: Image.asset(
+                        'assets/logo.png',
+                        width: widget.size,
+                        height: widget.size,
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ),
@@ -211,54 +213,3 @@ class _VeylLogoWidgetState extends State<VeylLogoWidget> with TickerProviderStat
   }
 }
 
-class _VeylLogoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double w = size.width;
-    final double h = size.height;
-
-    // Draw the gorgeous metallic ribbon V logo
-    final Paint paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.16
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..isAntiAlias = true;
-
-    // Premium Linear Gradient: Cyan -> Blue -> Indigo -> Purple
-    final Rect rect = Rect.fromLTWH(0, 0, w, h);
-    paint.shader = const LinearGradient(
-      colors: [
-        Color(0xFF00F2FE), // Bright Cyan
-        Color(0xFF2563EB), // Accent Blue
-        Color(0xFF4F46E5), // Indigo
-        Color(0xFF8B5CF6), // Purple
-      ],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    ).createShader(rect);
-
-    // Left leg of the V ribbon (curves smoothly inward and loops)
-    final Path path1 = Path();
-    path1.moveTo(w * 0.18, h * 0.22);
-    path1.cubicTo(
-      w * 0.12, h * 0.45, // First control point
-      w * 0.20, h * 0.85, // Second control point
-      w * 0.45, h * 0.82, // Base of the V
-    );
-    canvas.drawPath(path1, paint);
-
-    // Right leg of the V ribbon (sweeps upwards out with overlap)
-    final Path path2 = Path();
-    path2.moveTo(w * 0.45, h * 0.82);
-    path2.cubicTo(
-      w * 0.65, h * 0.78, // Control point 1
-      w * 0.76, h * 0.40, // Control point 2
-      w * 0.82, h * 0.22, // Top right
-    );
-    canvas.drawPath(path2, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}

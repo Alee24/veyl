@@ -91,24 +91,29 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen> {
   }
 
   void _acceptCall() async {
-    // Request camera + mic permissions before joining
     final callService = ref.read(callServiceProvider);
-    final hasPermission = await callService.requestCallPermissions(context);
-    if (!hasPermission) return; // Stop if denied
+    final isVideo = widget.roomName.startsWith('video_');
+
+    // Request permissions based on call type
+    final hasPermission = isVideo 
+        ? await callService.requestCallPermissions(context)
+        : await callService.requestMicPermission(context);
+    if (!hasPermission) return;
 
     ref.read(socketServiceProvider).acceptCall(widget.callerId);
     _stopRingingAndVibration();
     
-    // Launch Jitsi Meet video call
+    // Launch Jitsi Meet call
     final profileAsync = ref.read(userProfileProvider);
     final myDisplayName = profileAsync.value?['displayName'] ?? 'User';
     
-    if (mounted) context.pop(); // Close incoming call screen
+    if (mounted) context.pop();
     
     await callService.joinVideoCall(
       widget.roomName,
       myDisplayName,
       '',
+      videoEnabled: isVideo,
     );
   }
 

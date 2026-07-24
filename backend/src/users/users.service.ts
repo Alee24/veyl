@@ -31,8 +31,8 @@ export class UsersService {
         username: createUserDto.username,
         passwordHash,
         displayName: createUserDto.displayName,
+        phoneNumber: createUserDto.phoneNumber || null,
         bio: createUserDto.bio,
-        recoveryKeyHash,
         qrCode,
       },
     });

@@ -66,36 +66,46 @@ class AuthRepository {
   AuthRepository(this._dio, this.storage, this._authState);
 
   // -------------------------------------------------------------------------
-  // REGISTER (username + password + optional recovery key)
+  // REGISTER (username + password + optional phoneNumber/displayName)
   // -------------------------------------------------------------------------
   Future<void> register({
     required String username,
     required String password,
+    String? displayName,
+    String? phoneNumber,
     String? recoveryKey,
   }) async {
     try {
       final response = await _dio.post('/auth/register', data: {
         'username': username,
         'password': password,
-        'displayName': username, // Uses username as public display name by default
-        if (recoveryKey != null) 'recoveryKey': recoveryKey,
+        'displayName': displayName ?? username,
+        if (phoneNumber != null && phoneNumber.isNotEmpty) 'phoneNumber': phoneNumber,
+        if (recoveryKey != null && recoveryKey.isNotEmpty) 'recoveryKey': recoveryKey,
       });
 
       await _saveTokens(response.data);
       _authState.state = true;
     } on DioException catch (e) {
       final statusCode = e.response?.statusCode;
-      final message = e.response?.data?['message'];
+      final responseData = e.response?.data;
+      
       if (statusCode == 409) {
-        throw AuthException(
-          message ?? 'Username is already taken. Please choose another.',
-        );
+        throw AuthException('Username or phone number is already taken. Please choose another.');
       }
-      throw AuthException(
-        message ?? 'Could not connect to the server. Please try again later.',
-      );
+      
+      if (responseData is Map && responseData['message'] != null) {
+        final msg = responseData['message'];
+        if (msg is List) {
+          throw AuthException(msg.join(', '));
+        }
+        throw AuthException(msg.toString());
+      }
+      
+      throw AuthException('Could not connect to the server. Please check network.');
     } catch (e) {
-      throw AuthException('An unexpected error occurred. Please try again.');
+      if (e is AuthException) rethrow;
+      throw AuthException('An unexpected error occurred: ${e.toString()}');
     }
   }
 

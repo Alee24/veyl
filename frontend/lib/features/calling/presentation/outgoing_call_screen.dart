@@ -38,15 +38,21 @@ class _OutgoingCallScreenState extends ConsumerState<OutgoingCallScreen> {
   }
 
   void _checkPermissionsThenStart() async {
-    // Request camera + mic permissions BEFORE initiating the call
     final callService = ref.read(callServiceProvider);
-    final hasPermission = await callService.requestCallPermissions(context);
+    final isVideo = widget.roomName.startsWith('video_');
+    
+    // Request appropriate permissions based on call type
+    final hasPermission = isVideo
+        ? await callService.requestCallPermissions(context)
+        : await callService.requestMicPermission(context);
+
     if (!hasPermission) {
-      // Permissions denied — cancel the call and go back
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Camera and microphone access required to make calls.'),
+          SnackBar(
+            content: Text(isVideo 
+                ? 'Camera and microphone access required to make video calls.'
+                : 'Microphone access required to make voice calls.'),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -85,11 +91,13 @@ class _OutgoingCallScreenState extends ConsumerState<OutgoingCallScreen> {
         _stopCallingSound();
         if (mounted) context.pop(); // Close outgoing screen
         
+        final isVideo = widget.roomName.startsWith('video_');
         // Launch Jitsi Meet call
         await ref.read(callServiceProvider).joinVideoCall(
           widget.roomName,
           myDisplayName,
           '',
+          videoEnabled: isVideo,
         );
       }
     });
@@ -132,6 +140,8 @@ class _OutgoingCallScreenState extends ConsumerState<OutgoingCallScreen> {
     final isDark = theme.brightness == Brightness.dark;
     final avatarUrl = 'https://i.pravatar.cc/300?u=${widget.calleeUsername}';
 
+    final isVideo = widget.roomName.startsWith('video_');
+
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFFAFAFB),
       body: SafeArea(
@@ -169,18 +179,18 @@ class _OutgoingCallScreenState extends ConsumerState<OutgoingCallScreen> {
               style: const TextStyle(color: Colors.grey, fontSize: 16),
             ),
             const SizedBox(height: 24),
-            const Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(
+                const SizedBox(
                   width: 16,
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Text(
-                  'Calling...',
-                  style: TextStyle(color: Colors.grey, fontSize: 15, fontWeight: FontWeight.w500),
+                  isVideo ? 'Calling (Video)...' : 'Calling (Voice)...',
+                  style: const TextStyle(color: Colors.grey, fontSize: 15, fontWeight: FontWeight.w500),
                 ),
               ],
             ),

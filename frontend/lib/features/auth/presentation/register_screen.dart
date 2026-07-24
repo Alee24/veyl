@@ -206,10 +206,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final msg = e.toString().replaceAll('AuthException: ', '').replaceAll('Exception: ', '');
         setState(
-          () =>
-              _errorMessage =
-                  'Registration failed. Please check your connection and try again.',
+          () => _errorMessage = msg.isEmpty ? 'Registration failed. Please check your connection and try again.' : msg,
         );
       }
     } finally {

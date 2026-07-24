@@ -21,6 +21,10 @@ export class CreateUserDto {
 
   @IsOptional()
   @IsString()
+  phoneNumber?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(150)
   bio?: string;
 
