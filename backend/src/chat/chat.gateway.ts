@@ -93,16 +93,34 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('make_call')
-  handleMakeCall(
+  async handleMakeCall(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: { targetUserId: string; roomName: string; callerName: string; callerUsername: string }
   ) {
-    this.server.to(payload.targetUserId).emit('call_incoming', {
-      callerId: client.data.user.sub,
+    const callerId = client.data.user.sub || client.data.user.userId;
+    const targetUserId = payload.targetUserId;
+
+    const targetUser = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { id: targetUserId },
+          { username: targetUserId }
+        ]
+      }
+    });
+
+    const callPayload = {
+      callerId,
       callerName: payload.callerName,
       callerUsername: payload.callerUsername,
       roomName: payload.roomName,
-    });
+    };
+
+    this.server.to(targetUserId).emit('call_incoming', callPayload);
+    if (targetUser) {
+      this.server.to(targetUser.id).emit('call_incoming', callPayload);
+      this.server.to(targetUser.username).emit('call_incoming', callPayload);
+    }
   }
 
   @SubscribeMessage('accept_call')

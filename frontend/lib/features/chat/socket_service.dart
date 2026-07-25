@@ -48,14 +48,24 @@ class SocketService {
   IO.Socket? get socket => _socket;
 
   Future<void> connect() async {
-    if (_socket != null && _socket!.connected) return;
-
     final storage = _ref.read(secureStorageProvider);
     final token = await storage.read(key: 'accessToken');
 
+    if (_socket != null && _socket!.connected) {
+      return;
+    }
+
+    if (_socket != null) {
+      _socket!.dispose();
+      _socket = null;
+    }
+
     _socket = IO.io(getBaseUrl(), IO.OptionBuilder()
-      .setTransports(['websocket'])
-      .disableAutoConnect()
+      .setTransports(['websocket', 'polling'])
+      .enableAutoConnect()
+      .enableReconnection()
+      .setReconnectionAttempts(9999)
+      .setReconnectionDelay(1000)
       .setAuth({'token': token})
       .build()
     );
@@ -63,7 +73,7 @@ class SocketService {
     _socket!.connect();
 
     _socket!.onConnect((_) {
-      print('Connected to Socket.IO');
+      print('⚡ Connected to Socket.IO signaling server');
     });
 
     _socket!.on('new_message', (data) {
