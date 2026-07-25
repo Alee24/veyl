@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
+import 'permission_initializer.dart';
 import '../features/chat/socket_service.dart';
 
 class MainLayout extends ConsumerStatefulWidget {
@@ -26,7 +27,9 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
     super.initState();
     
     // Connect Socket and listen for incoming calls globally
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await PermissionInitializer.requestAppPermissions(context);
+      
       final socketService = ref.read(socketServiceProvider);
       socketService.connect();
 

@@ -77,10 +77,14 @@ class _OutgoingCallScreenState extends ConsumerState<OutgoingCallScreen> {
       callerUsername: myUsername,
     );
 
-    // 2. Play Calling / Ringback sound (Mixkit double ring)
+    // 2. Play Futuristic Calling / Ringback sound
     try {
       await _audioPlayer.setReleaseMode(ReleaseMode.loop);
-      await _audioPlayer.play(UrlSource('https://assets.mixkit.co/active_storage/sfx/903/903-84.wav'));
+      try {
+        await _audioPlayer.play(AssetSource('audio/futuristic_outgoing.wav'));
+      } catch (_) {
+        await _audioPlayer.play(UrlSource('https://assets.mixkit.co/active_storage/sfx/903/903-84.wav'));
+      }
     } catch (e) {
       debugPrint('Failed to play calling ringback sound: $e');
     }
