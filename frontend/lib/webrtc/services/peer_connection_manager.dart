@@ -54,15 +54,17 @@ class PeerConnectionManager {
         'highpassFilter': true,
       },
       'video': callType == CallType.video
-          ? {
-              'mandatory': {
-                'minWidth': '640',
-                'minHeight': '480',
-                'minFrameRate': '30',
-              },
-              'facingMode': 'user',
-              'optional': [],
-            }
+          ? (kIsWeb
+              ? true
+              : {
+                  'mandatory': {
+                    'minWidth': '640',
+                    'minHeight': '480',
+                    'minFrameRate': '30',
+                  },
+                  'facingMode': 'user',
+                  'optional': [],
+                })
           : false,
     };
 
@@ -75,23 +77,39 @@ class PeerConnectionManager {
       // 2. Create PeerConnection with DTLS/SRTP hardware encryption
       _peerConnection = await createPeerConnection(_iceServers);
 
-      // Add local media tracks
+      // Add local media tracks to PeerConnection
       _localStream!.getTracks().forEach((track) {
         _peerConnection!.addTrack(track, _localStream!);
       });
 
-      // Handle Remote Stream Track
+      // Prepare Remote Stream container
+      _remoteStream = await createLocalMediaStream('remote_stream');
+
+      // Handle Remote Stream Track (Unified-Plan)
       _peerConnection!.onTrack = (RTCTrackEvent event) {
+        debugPrint('WebRTC onTrack received: ${event.track.kind}');
         if (event.streams.isNotEmpty) {
           _remoteStream = event.streams[0];
-          if (onRemoteStream != null) {
-            onRemoteStream!(_remoteStream!);
-          }
+        } else if (event.track != null) {
+          _remoteStream!.addTrack(event.track);
+        }
+        if (onRemoteStream != null && _remoteStream != null) {
+          onRemoteStream!(_remoteStream!);
+        }
+      };
+
+      // Handle Remote Stream (Plan-B / Legacy fallback)
+      _peerConnection!.onAddStream = (MediaStream stream) {
+        debugPrint('WebRTC onAddStream received');
+        _remoteStream = stream;
+        if (onRemoteStream != null && _remoteStream != null) {
+          onRemoteStream!(_remoteStream!);
         }
       };
 
       // Handle ICE Candidates
       _peerConnection!.onIceCandidate = (RTCIceCandidate candidate) {
+        debugPrint('Generated local ICE Candidate: ${candidate.sdpMid} - ${candidate.candidate}');
         if (onIceCandidate != null) {
           onIceCandidate!(candidate);
         }
@@ -99,10 +117,18 @@ class PeerConnectionManager {
 
       // Handle Connection State Changes (Wi-Fi ↔ 4G ↔ 5G handover)
       _peerConnection!.onConnectionState = (RTCPeerConnectionState state) {
-        debugPrint('WebRTC Connection State: $state');
+        debugPrint('WebRTC Connection State Changed: $state');
         if (onConnectionStateChange != null) {
           onConnectionStateChange!(state);
         }
+      };
+
+      _peerConnection!.onIceConnectionState = (RTCIceConnectionState state) {
+        debugPrint('WebRTC ICE Connection State Changed: $state');
+      };
+
+      _peerConnection!.onSignalingState = (RTCSignalingState state) {
+        debugPrint('WebRTC Signaling State Changed: $state');
       };
     } catch (e) {
       debugPrint('PeerConnectionManager initialize error: $e');
@@ -110,33 +136,69 @@ class PeerConnectionManager {
     }
   }
 
+  final List<RTCIceCandidate> _remoteIceCandidateQueue = [];
+  bool _hasRemoteDescription = false;
+
+  Future<void> _drainIceCandidateQueue() async {
+    if (_peerConnection == null || !_hasRemoteDescription) return;
+    debugPrint('Draining ${_remoteIceCandidateQueue.length} queued ICE candidates...');
+    for (final candidate in List<RTCIceCandidate>.from(_remoteIceCandidateQueue)) {
+      try {
+        await _peerConnection!.addCandidate(candidate);
+        debugPrint('Drained queued ICE candidate: ${candidate.sdpMid}');
+      } catch (e) {
+        debugPrint('Error adding queued ICE candidate: $e');
+      }
+    }
+    _remoteIceCandidateQueue.clear();
+  }
+
   /// Creates a WebRTC SDP Offer (Caller)
   Future<RTCSessionDescription> createOffer() async {
     if (_peerConnection == null) throw Exception('PeerConnection not initialized');
     final offer = await _peerConnection!.createOffer();
     await _peerConnection!.setLocalDescription(offer);
+    debugPrint('Created SDP Offer');
     return offer;
   }
 
   /// Creates a WebRTC SDP Answer (Callee)
   Future<RTCSessionDescription> createAnswer(RTCSessionDescription offer) async {
     if (_peerConnection == null) throw Exception('PeerConnection not initialized');
+    debugPrint('Setting remote description (Offer)...');
     await _peerConnection!.setRemoteDescription(offer);
+    _hasRemoteDescription = true;
+    await _drainIceCandidateQueue();
+
     final answer = await _peerConnection!.createAnswer();
     await _peerConnection!.setLocalDescription(answer);
+    debugPrint('Created SDP Answer');
     return answer;
   }
 
   /// Sets Remote SDP Answer
   Future<void> setRemoteAnswer(RTCSessionDescription answer) async {
     if (_peerConnection == null) return;
+    debugPrint('Setting remote description (Answer)...');
     await _peerConnection!.setRemoteDescription(answer);
+    _hasRemoteDescription = true;
+    await _drainIceCandidateQueue();
   }
 
-  /// Adds Remote ICE Candidate
+  /// Adds Remote ICE Candidate (with Queueing)
   Future<void> addIceCandidate(RTCIceCandidate candidate) async {
     if (_peerConnection == null) return;
-    await _peerConnection!.addCandidate(candidate);
+    if (_hasRemoteDescription) {
+      try {
+        await _peerConnection!.addCandidate(candidate);
+        debugPrint('Added ICE candidate directly: ${candidate.sdpMid}');
+      } catch (e) {
+        debugPrint('Error adding ICE candidate: $e');
+      }
+    } else {
+      debugPrint('Queuing remote ICE candidate until remote description is set: ${candidate.sdpMid}');
+      _remoteIceCandidateQueue.add(candidate);
+    }
   }
 
   /// Mutes or unmutes local microphone track

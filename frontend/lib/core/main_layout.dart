@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:async';
@@ -44,6 +45,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
   }
 
   void _startConnectivityCheck() {
+    if (kIsWeb) return;
     _connectivityTimer = Timer.periodic(const Duration(seconds: 8), (timer) async {
       try {
         // Fast ping to verify connection

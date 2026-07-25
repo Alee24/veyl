@@ -35,8 +35,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const payload = await this.jwtService.verifyAsync(token, { secret: process.env.JWT_SECRET || 'veyl_super_secret_dev_key' });
       client.data.user = payload;
       
-      // User joins their personal room to receive private events
-      client.join(payload.sub);
+      // User joins their personal rooms (by sub, userId, username) to receive private call events
+      if (payload.sub) client.join(payload.sub);
+      if (payload.userId) client.join(payload.userId);
+      if (payload.username) client.join(payload.username);
     } catch (e) {
       client.disconnect();
     }
