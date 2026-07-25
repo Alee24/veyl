@@ -10,6 +10,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
 import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from '../prisma/prisma.service';
 
 @WebSocketGateway({
   cors: {
@@ -22,7 +23,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   constructor(
     private chatService: ChatService,
-    private jwtService: JwtService
+    private jwtService: JwtService,
+    private prisma: PrismaService
   ) {}
 
   async handleConnection(client: Socket) {
