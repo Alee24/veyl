@@ -8,6 +8,9 @@ import 'dart:ui';
 import 'permission_initializer.dart';
 import '../features/chat/socket_service.dart';
 
+import 'notification_service.dart';
+import '../features/auth/auth_provider.dart';
+
 class MainLayout extends ConsumerStatefulWidget {
   final Widget child;
   const MainLayout({super.key, required this.child});
@@ -20,6 +23,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
   int _currentIndex = 0;
   int? _hoveredIndex;
   StreamSubscription? _incomingCallSub;
+  StreamSubscription? _messageSub;
   Timer? _connectivityTimer;
   bool _hasInternet = true;
 
@@ -27,16 +31,34 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
   void initState() {
     super.initState();
     
-    // Connect Socket and listen for incoming calls globally
+    // Connect Socket and listen for incoming calls and messages globally
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await PermissionInitializer.requestAppPermissions(context);
       
       final socketService = ref.read(socketServiceProvider);
-      socketService.connect();
+      await socketService.connect();
 
       _incomingCallSub = socketService.onCallIncoming.listen((data) {
         if (mounted) {
           context.push('/incoming_call', extra: data);
+        }
+      });
+
+      _messageSub = socketService.onMessage.listen((data) {
+        final sender = data['sender'];
+        final senderName = sender?['displayName'] ?? sender?['username'] ?? 'Veyl Contact';
+        final content = data['content'] ?? 'New message received';
+        final senderId = data['senderId'] ?? sender?['id'];
+        
+        final profileAsync = ref.read(userProfileProvider);
+        final currentUserId = profileAsync.value?['userId'] ?? '';
+        
+        if (senderId != currentUserId && mounted) {
+          NotificationService.playMessageAlert(
+            context,
+            title: senderName,
+            body: content,
+          );
         }
       });
 
@@ -105,6 +127,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
   @override
   void dispose() {
     _incomingCallSub?.cancel();
+    _messageSub?.cancel();
     _connectivityTimer?.cancel();
     super.dispose();
   }

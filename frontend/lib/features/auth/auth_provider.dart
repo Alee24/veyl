@@ -202,6 +202,7 @@ class AuthRepository {
     await storage.write(key: 'userId', value: data['user']['id']);
 
     final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('accessToken', data['accessToken'] ?? '');
     await prefs.setString('username', data['user']['username'] ?? '');
     await prefs.setString(
       'displayName',

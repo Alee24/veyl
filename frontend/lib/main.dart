@@ -6,6 +6,8 @@ import 'core/router.dart';
 import 'core/theme.dart';
 import 'features/auth/auth_provider.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
@@ -14,19 +16,26 @@ void main() async {
     debugPrint('Firebase initialization failed: $e');
   }
 
-  // Pre-check authentication status to keep user logged in
+  // Pre-check authentication status to keep user logged in forever
   String? token;
   try {
     const storage = FlutterSecureStorage();
     token = await storage.read(key: 'accessToken');
+    if (token == null || token.isEmpty) {
+      final prefs = await SharedPreferences.getInstance();
+      token = prefs.getString('accessToken');
+    }
   } catch (e) {
-    debugPrint('Secure storage read failed: $e');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      token = prefs.getString('accessToken');
+    } catch (_) {}
   }
 
   runApp(
     ProviderScope(
       overrides: [
-        if (token != null) authStateProvider.overrideWith((ref) => true),
+        if (token != null && token.isNotEmpty) authStateProvider.overrideWith((ref) => true),
       ],
       child: const VeylApp(),
     ),
