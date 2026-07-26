@@ -7,9 +7,22 @@ import '../../core/api_client.dart';
 import 'socket_service.dart';
 
 final userChatsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
-  final dio = ref.read(dioProvider);
-  final response = await dio.get('/chat');
-  return response.data as List<dynamic>;
+  try {
+    final dio = ref.read(dioProvider);
+    final response = await dio.get('/chat');
+    final chats = response.data as List<dynamic>;
+    
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_chats_cache', jsonEncode(chats));
+    return chats;
+  } catch (e) {
+    final prefs = await SharedPreferences.getInstance();
+    final cached = prefs.getString('user_chats_cache');
+    if (cached != null && cached.isNotEmpty) {
+      return jsonDecode(cached) as List<dynamic>;
+    }
+    return [];
+  }
 });
 
 final chatProvider = Provider((ref) {

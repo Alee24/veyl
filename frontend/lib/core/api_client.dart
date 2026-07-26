@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:flutter/foundation.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 final secureStorageProvider = Provider((ref) => const FlutterSecureStorage());
 
 String getBaseUrl() {
@@ -27,8 +29,19 @@ final dioProvider = Provider<Dio>((ref) {
 
   dio.interceptors.add(InterceptorsWrapper(
     onRequest: (options, handler) async {
-      final token = await storage.read(key: 'accessToken');
-      if (token != null) {
+      String? token;
+      try {
+        token = await storage.read(key: 'accessToken');
+      } catch (_) {}
+
+      if (token == null || token.isEmpty) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          token = prefs.getString('accessToken');
+        } catch (_) {}
+      }
+
+      if (token != null && token.isNotEmpty) {
         options.headers['Authorization'] = 'Bearer $token';
       }
       return handler.next(options);

@@ -10,10 +10,26 @@ import '../../../core/api_client.dart';
 import '../room_provider.dart';
 import '../../../core/widgets/premium_button.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+
 final allUsersProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
-  final dio = ref.read(dioProvider);
-  final response = await dio.get('/users');
-  return response.data as List<dynamic>;
+  try {
+    final dio = ref.read(dioProvider);
+    final response = await dio.get('/users');
+    final users = response.data as List<dynamic>;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('all_users_cache', jsonEncode(users));
+    return users;
+  } catch (e) {
+    final prefs = await SharedPreferences.getInstance();
+    final cached = prefs.getString('all_users_cache');
+    if (cached != null && cached.isNotEmpty) {
+      return jsonDecode(cached) as List<dynamic>;
+    }
+    return [];
+  }
 });
 
 final callSearchQueryProvider = StateProvider.autoDispose<String>((ref) => '');
