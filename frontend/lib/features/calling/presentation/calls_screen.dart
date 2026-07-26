@@ -110,6 +110,8 @@ class _CallsScreenState extends ConsumerState<CallsScreen> with SingleTickerProv
 
       final String roomId = roomData['id'];
 
+      ref.invalidate(activeRoomsProvider);
+
       setState(() {
         _roomNameController.clear();
       });
@@ -581,12 +583,11 @@ class _CallsScreenState extends ConsumerState<CallsScreen> with SingleTickerProv
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.colorScheme.secondary.withOpacity(0.08),
-                      foregroundColor: theme.colorScheme.secondary,
-                      elevation: 0,
+                      backgroundColor: const Color(0xFF6366F1),
+                      foregroundColor: Colors.white,
+                      elevation: 2,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(color: theme.colorScheme.secondary.withOpacity(0.3)),
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
@@ -596,13 +597,150 @@ class _CallsScreenState extends ConsumerState<CallsScreen> with SingleTickerProv
                       children: [
                         Icon(Icons.login, size: 18),
                         SizedBox(width: 8),
-                        Text('Tune In / Listen Live', style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text('Enter Podcast Room', style: TextStyle(fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 28),
+
+          // Active Podcast Rooms Directory
+          Text(
+            'Live Active Breakout Rooms',
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+
+          Consumer(
+            builder: (context, ref, child) {
+              final activeRoomsAsync = ref.watch(activeRoomsProvider);
+              return activeRoomsAsync.when(
+                data: (rooms) {
+                  if (rooms.isEmpty) {
+                    return Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE5E7EB)),
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'No active broadcast rooms right now. Create one above!',
+                          style: TextStyle(color: Colors.grey, fontSize: 13),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return Column(
+                    children: rooms.map((room) {
+                      final roomId = room['id'];
+                      final name = room['name'] ?? 'Podcast Room';
+                      final presenter = room['presenter'] ?? {};
+                      final presenterName = presenter['displayName'] ?? presenter['username'] ?? 'Host';
+                      
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: theme.cardColor,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE5E7EB)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF6366F1).withOpacity(0.12),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.podcasts, color: Color(0xFF6366F1), size: 20),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        name,
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                      ),
+                                      Text(
+                                        'Host: $presenterName • ID: ${roomId.toString().substring(0, 8)}...',
+                                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF10B981).withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Row(
+                                    children: [
+                                      CircleAvatar(radius: 3, backgroundColor: Color(0xFF10B981)),
+                                      SizedBox(width: 4),
+                                      Text('LIVE', style: TextStyle(color: Color(0xFF10B981), fontSize: 10, fontWeight: FontWeight.bold)),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(color: Color(0xFF6366F1)),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    ),
+                                    icon: const Icon(Icons.content_copy, size: 14, color: Color(0xFF6366F1)),
+                                    label: const Text('Copy ID', style: TextStyle(color: Color(0xFF6366F1), fontSize: 12)),
+                                    onPressed: () {
+                                      Clipboard.setData(ClipboardData(text: roomId));
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('✅ Room ID copied to clipboard!')),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF6366F1),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    ),
+                                    icon: const Icon(Icons.login, size: 14, color: Colors.white),
+                                    label: const Text('Join Studio', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                                    onPressed: () {
+                                      context.push('/room/$roomId');
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF6366F1))),
+                error: (err, stack) => const Text('Could not load active rooms directory.', style: TextStyle(color: Colors.grey)),
+              );
+            },
           ),
         ],
       ),

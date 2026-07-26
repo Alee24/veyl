@@ -2,6 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../../core/api_client.dart';
 
+final activeRoomsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  return ref.read(roomServiceProvider).getActiveRooms();
+});
+
 final roomServiceProvider = Provider((ref) {
   return RoomRepository(ref.read(dioProvider));
 });
@@ -19,8 +23,16 @@ class RoomRepository {
     return response.data;
   }
 
+  Future<List<dynamic>> getActiveRooms() async {
+    try {
+      final response = await _dio.get('/room');
+      return response.data as List<dynamic>;
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<Map<String, dynamic>> getRoom(String roomId) async {
-    // Public endpoint bypasses standard auth wrapper if offline or unregistered
     final response = await _dio.get('/room/$roomId');
     return response.data;
   }

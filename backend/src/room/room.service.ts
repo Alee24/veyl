@@ -10,14 +10,16 @@ export class RoomService {
       throw new BadRequestException('Room name is required');
     }
 
-    if (!presenterId) {
-      throw new BadRequestException('Presenter ID is required to create a room');
+    let finalPresenterId = presenterId;
+    if (!finalPresenterId) {
+      const defaultUser = await this.getDefaultPresenter();
+      finalPresenterId = defaultUser.id;
     }
     
     let expiresAt: Date | null = null;
     if (type === 'TEMPORARY') {
       if (!durationHours || durationHours <= 0) {
-        throw new BadRequestException('Valid duration is required for temporary rooms');
+        durationHours = 3;
       }
       expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + durationHours);
@@ -28,8 +30,39 @@ export class RoomService {
         name,
         type,
         expiresAt,
-        presenterId,
+        presenterId: finalPresenterId,
       },
+      include: {
+        presenter: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            profilePhotoUrl: true,
+          }
+        }
+      }
+    });
+  }
+
+  async getDefaultPresenter() {
+    let user = await this.prisma.user.findFirst();
+    if (!user) {
+      user = await this.prisma.user.create({
+        data: {
+          username: 'host',
+          displayName: 'Host Presenter',
+          qrCode: 'host_qr_' + Math.random().toString(36).substring(7),
+        }
+      });
+    }
+    return user;
+  }
+
+  async getActiveRooms() {
+    return this.prisma.room.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50,
       include: {
         presenter: {
           select: {

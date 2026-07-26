@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
+
 import '../../../core/api_client.dart';
 import '../../auth/auth_provider.dart';
-import '../call_service.dart';
 import '../room_provider.dart';
+import '../../../webrtc/services/peer_connection_manager.dart';
 
 class RoomScreen extends ConsumerStatefulWidget {
   final String roomId;
@@ -19,30 +23,57 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
   bool _isLoading = true;
   String? _errorMessage;
   Map<String, dynamic>? _roomData;
-  late AnimationController _radarController;
+  late AnimationController _pulseController;
+  late PeerConnectionManager _pcm;
+
+  final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
+  final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
+
+  bool _isMicMuted = false;
+  bool _isVideoMuted = true;
+  bool _isSpeakerMode = true; // true = Speaker/Presenter, false = Audience Listener
+  bool _handRaised = false;
+  bool _joinedCall = false;
 
   @override
   void initState() {
     super.initState();
-    _radarController = AnimationController(
+    _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat();
     
+    _pcm = PeerConnectionManager(
+      onRemoteStream: (stream) {
+        if (mounted) {
+          setState(() {
+            _remoteRenderer.srcObject = stream;
+          });
+        }
+      },
+    );
+
+    _initRenderers();
     _initializeAndJoin();
+  }
+
+  Future<void> _initRenderers() async {
+    await _localRenderer.initialize();
+    await _remoteRenderer.initialize();
   }
 
   @override
   void dispose() {
-    _radarController.dispose();
+    _pulseController.dispose();
+    _localRenderer.dispose();
+    _remoteRenderer.dispose();
+    _pcm.closeConnection();
     super.dispose();
   }
 
   void _initializeAndJoin() async {
     try {
       final authState = ref.read(authStateProvider);
-      
-      // Auto guest login if unauthenticated
       if (!authState) {
         setState(() {
           _isLoading = true;
@@ -51,7 +82,6 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
         await ref.read(authProvider).guestLogin();
       }
 
-      // Fetch Room Details
       final room = await ref.read(roomServiceProvider).getRoom(widget.roomId);
       setState(() {
         _roomData = room;
@@ -65,24 +95,148 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
     }
   }
 
+  Future<void> _connectPodcastCall({required bool asSpeaker}) async {
+    setState(() {
+      _isSpeakerMode = asSpeaker;
+      _isMicMuted = !asSpeaker; // Mute mic if joining as audience
+      _joinedCall = true;
+    });
+
+    await _pcm.initializePeerConnection();
+
+    if (_pcm.localStream != null) {
+      _localRenderer.srcObject = _pcm.localStream;
+    }
+
+    if (asSpeaker) {
+      _pcm.toggleMicrophone(!_isMicMuted);
+    }
+  }
+
+  void _toggleMic() {
+    setState(() {
+      _isMicMuted = !_isMicMuted;
+    });
+    _pcm.toggleMicrophone(!_isMicMuted);
+  }
+
+  void _toggleVideo() {
+    setState(() {
+      _isVideoMuted = !_isVideoMuted;
+    });
+    _pcm.toggleCamera(!_isVideoMuted);
+  }
+
+  void _toggleRaiseHand() {
+    setState(() {
+      _handRaised = !_handRaised;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_handRaised ? '✋ Hand raised! Host notified.' : 'Hand lowered.'),
+        backgroundColor: _handRaised ? const Color(0xFF6366F1) : Colors.grey,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _showShareDialog() {
+    final String shareUrl = 'https://veyl.kkdes.co.ke/app.html#/room/${widget.roomId}';
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1E293B),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: const Text(
+            'Podcast Invite & Room ID',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+            textAlign: TextAlign.center,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: QrImageView(
+                  data: shareUrl,
+                  version: QrVersions.auto,
+                  size: 160.0,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.25),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Room ID: ${widget.roomId}',
+                        style: const TextStyle(color: Colors.white70, fontSize: 13, fontFamily: 'monospace'),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.copy, color: Color(0xFF6366F1), size: 20),
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: widget.roomId));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Room ID copied to clipboard!')),
+                        );
+                      },
+                    )
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6366F1),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  icon: const Icon(Icons.share, color: Colors.white),
+                  label: const Text('Share Podcast Link', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    Share.share('Join my live audio/video podcast on Veyl: $shareUrl');
+                  },
+                ),
+              )
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final profileAsync = ref.watch(userProfileProvider);
     final currentUserId = profileAsync.value?['userId'] ?? '';
-    final currentUsername = profileAsync.value?['username'] ?? 'Guest';
 
     if (_isLoading) {
       return const Scaffold(
-        backgroundColor: Color(0xFF0F111A),
+        backgroundColor: Color(0xFF0F172A),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(color: Color(0xFF5D3FD3)),
+              CircularProgressIndicator(color: Color(0xFF6366F1)),
               SizedBox(height: 16),
               Text(
-                'Connecting to breakout room...',
+                'Initializing Podcast Studio...',
                 style: TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.w500),
               ),
             ],
@@ -93,7 +247,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
 
     if (_errorMessage != null) {
       return Scaffold(
-        backgroundColor: const Color(0xFF0F111A),
+        backgroundColor: const Color(0xFF0F172A),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
@@ -102,9 +256,9 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
               children: [
                 const Icon(Icons.error_outline, size: 64, color: Colors.redAccent),
                 const SizedBox(height: 16),
-                Text(
-                  'Could Not Join Room',
-                  style: TextStyle(color: theme.colorScheme.onBackground, fontSize: 22, fontWeight: FontWeight.bold),
+                const Text(
+                  'Could Not Join Podcast Room',
+                  style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -115,7 +269,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
                 const SizedBox(height: 32),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colorScheme.primary,
+                    backgroundColor: const Color(0xFF6366F1),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                   ),
@@ -134,53 +288,75 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
     final presenterId = room['presenterId'] ?? '';
     final isPresenter = presenterId == currentUserId;
     
-    final presenterName = presenter['displayName'] ?? presenter['username'] ?? 'Presenter';
+    final presenterName = presenter['displayName'] ?? presenter['username'] ?? 'Host Presenter';
     final presenterAvatar = presenter['profilePhotoUrl'] != null && presenter['profilePhotoUrl'].isNotEmpty
-        ? '${getBaseUrl()}${presenter['profilePhotoUrl']}'
-        : 'https://i.pravatar.cc/150?u=${presenter['username'] ?? 'presenter'}';
+        ? (presenter['profilePhotoUrl'].startsWith('http')
+            ? presenter['profilePhotoUrl']
+            : '${getBaseUrl()}${presenter['profilePhotoUrl']}')
+        : 'https://api.dicebear.com/7.x/bottts/png?seed=${presenter['username'] ?? 'host'}';
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F111A),
+      backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
-          onPressed: () => context.go('/home'),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => context.pop(),
         ),
-        title: Text(
-          room['name'] ?? 'Breakout Room',
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              room['name'] ?? 'Podcast Studio',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            const Text(
+              'LIVE AUDIO & VIDEO BROADCAST',
+              style: TextStyle(color: Color(0xFF10B981), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+            ),
+          ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share, color: Colors.white),
+            onPressed: _showShareDialog,
+          ),
+        ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
+      body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             
-            // Presenter Radar/Visual Indicator
+            // Presenter Stage & Audio Visualizer Header
             Expanded(
-              child: Center(
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Radar Pulsating Rings
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Remote / Video Stream View
+                  if (!_isVideoMuted && _remoteRenderer.srcObject != null)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: RTCVideoView(_remoteRenderer, objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover),
+                    )
+                  else
+                    // Pulsating Audio Rings
                     AnimatedBuilder(
-                      animation: _radarController,
+                      animation: _pulseController,
                       builder: (context, child) {
                         return Stack(
                           alignment: Alignment.center,
                           children: List.generate(3, (index) {
-                            final progress = (_radarController.value + index / 3) % 1.0;
+                            final progress = (_pulseController.value + index / 3) % 1.0;
                             return Container(
-                              width: 120 + progress * 160,
-                              height: 120 + progress * 160,
+                              width: 140 + progress * 160,
+                              height: 140 + progress * 160,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: const Color(0xFF5D3FD3).withOpacity(1.0 - progress),
-                                  width: 2,
+                                  color: const Color(0xFF6366F1).withOpacity(1.0 - progress),
+                                  width: 2.5,
                                 ),
                               ),
                             );
@@ -188,152 +364,175 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
                         );
                       },
                     ),
-                    // Presenter Avatar
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF5D3FD3),
-                        shape: BoxShape.circle,
-                      ),
-                      child: CircleAvatar(
-                        radius: 56,
-                        backgroundImage: NetworkImage(presenterAvatar),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+
+                  // Host Presenter Avatar Card
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF5D3FD3),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 6)],
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.mic, color: Colors.white, size: 14),
-                            SizedBox(width: 4),
-                            Text('PRESENTER', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                          shape: BoxShape.circle,
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF6366F1), Color(0xFFA855F7)],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF6366F1).withOpacity(0.4),
+                              blurRadius: 20,
+                              spreadRadius: 4,
+                            )
                           ],
                         ),
+                        child: CircleAvatar(
+                          radius: 56,
+                          backgroundImage: NetworkImage(presenterAvatar),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E293B),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.mic, color: Color(0xFF10B981), size: 16),
+                            const SizedBox(width: 6),
+                            Text(
+                              isPresenter ? 'YOU ARE HOSTING' : 'HOST: $presenterName',
+                              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Mode Selector / Join Studio Container
+            if (!_joinedCall) ...[
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E293B),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                ),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Choose How to Participate',
+                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Join as an interactive speaker with microphone access, or listen live as audience.',
+                      style: TextStyle(color: Colors.white60, fontSize: 13),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF6366F1),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                            ),
+                            icon: const Icon(Icons.mic, color: Colors.white),
+                            label: const Text('Join as Speaker', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            onPressed: () => _connectPodcastCall(asSpeaker: true),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Color(0xFF6366F1), width: 1.5),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                            ),
+                            icon: const Icon(Icons.headphones, color: Color(0xFF6366F1)),
+                            label: const Text('Listen Live', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            onPressed: () => _connectPodcastCall(asSpeaker: false),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              // Live Interactive Controls Bar
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E293B),
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 16, offset: const Offset(0, 4))
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // Mic Toggle
+                    IconButton(
+                      icon: Icon(
+                        _isMicMuted ? Icons.mic_off : Icons.mic,
+                        color: _isMicMuted ? Colors.redAccent : const Color(0xFF10B981),
+                        size: 28,
+                      ),
+                      onPressed: _toggleMic,
+                    ),
+
+                    // Camera Toggle
+                    IconButton(
+                      icon: Icon(
+                        _isVideoMuted ? Icons.videocam_off : Icons.videocam,
+                        color: _isVideoMuted ? Colors.grey : const Color(0xFF6366F1),
+                        size: 28,
+                      ),
+                      onPressed: _toggleVideo,
+                    ),
+
+                    // Raise Hand (for audience)
+                    IconButton(
+                      icon: Icon(
+                        Icons.front_hand,
+                        color: _handRaised ? Colors.amberAccent : Colors.white60,
+                        size: 26,
+                      ),
+                      onPressed: _toggleRaiseHand,
+                    ),
+
+                    // Leave Room
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.redAccent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.call_end, color: Colors.white, size: 24),
+                        onPressed: () => context.pop(),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-            
-            const SizedBox(height: 24),
-            
-            // Host Information
-            Text(
-              isPresenter ? 'You are the Host' : '$presenterName is presenting',
-              style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              room['type'] == 'TEMPORARY' ? 'Breakout Room (Temporary)' : 'Permanent Channel',
-              style: const TextStyle(color: Colors.grey, fontSize: 14),
-            ),
-            
-            const SizedBox(height: 48),
-
-            // Room Info Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF161825),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withOpacity(0.05)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.05),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      isPresenter ? Icons.settings_voice : Icons.headset,
-                      color: const Color(0xFF5D3FD3),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          isPresenter ? 'Presenter Controls' : 'Listener Mode Only',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          isPresenter 
-                              ? 'Your voice will be broadcast live to all guests.' 
-                              : 'You are joined as a listener. Microphones are muted.',
-                          style: const TextStyle(color: Colors.grey, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 48),
-            
-            // Connect Live Call Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF5D3FD3),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  elevation: 8,
-                  shadowColor: const Color(0xFF5D3FD3).withOpacity(0.4),
-                ),
-                child: Text(
-                  isPresenter ? 'Start Broadcast' : 'Listen Live',
-                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                onPressed: () async {
-                  final callService = ref.read(callServiceProvider);
-                  // Request permissions before joining any call mode
-                  final hasPermission = await callService.requestCallPermissions(context);
-                  if (!hasPermission) return;
-
-                  if (isPresenter) {
-                    // Presenter joins with audio and video enabled
-                    await callService.joinVideoCall(
-                      widget.roomId,
-                      currentUsername,
-                      presenterAvatar,
-                    );
-                  } else {
-                    // Guests join in audio-muted listener mode
-                    final cleanRoom = widget.roomId.replaceAll(RegExp(r'[^a-zA-Z0-9-]'), '');
-                    final urlString =
-                        'https://meet.jit.si/veyl-$cleanRoom'
-                        '#userInfo.displayName="$currentUsername"'
-                        '&config.startWithAudioMuted=true'
-                        '&config.startWithVideoMuted=true'
-                        '&config.prejoinPageEnabled=false';
-                    final Uri url = Uri.parse(urlString);
-                    if (await canLaunchUrl(url)) {
-                      await launchUrl(url, mode: LaunchMode.externalApplication);
-                    } else if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Could not join the stream. Please check your browser settings.')),
-                      );
-                    }
-                  }
-                },
-              ),
-            ),
-            const SizedBox(height: 20),
+            ],
+            const SizedBox(height: 16),
           ],
         ),
       ),

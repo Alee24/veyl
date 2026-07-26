@@ -244,6 +244,25 @@ class PeerConnectionManager {
     }
   }
 
+  MediaStream? get localStream => _localStream;
+  MediaStream? get remoteStream => _remoteStream;
+
+  Future<void> initializePeerConnection({bool isVideo = false}) async {
+    await initialize(isVideo ? CallType.video : CallType.voice);
+  }
+
+  void toggleMicrophone(bool enabled) {
+    setAudioMuted(!enabled);
+  }
+
+  void toggleCamera(bool enabled) {
+    setVideoMuted(!enabled);
+  }
+
+  Future<void> closeConnection() async {
+    await dispose();
+  }
+
   /// Closes and disposes all media streams and peer connections
   Future<void> dispose() async {
     _localStream?.getTracks().forEach((track) => track.stop());
