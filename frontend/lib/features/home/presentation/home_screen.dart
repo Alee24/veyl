@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../auth/auth_provider.dart';
 import '../../chat/chat_provider.dart';
+import '../../contacts/presentation/disposable_links_screen.dart';
 import '../../../core/widgets/veyl_logo.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -277,8 +278,8 @@ class HomeScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
 
-            // 3. Disposable Contact Banner
-            _buildDisposableBanner(context, theme, isDark),
+            // 3. Disposable Contact Links Section
+            _buildDisposableBanner(context, ref, theme, isDark),
             const SizedBox(height: 24),
 
             // 4. Recent Chats Section
@@ -377,7 +378,150 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDisposableBanner(BuildContext context, ThemeData theme, bool isDark) {
+  Widget _buildDisposableBanner(BuildContext context, WidgetRef ref, ThemeData theme, bool isDark) {
+    final allLinksAsync = ref.watch(allLinksProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.bolt, color: Color(0xFF6366F1), size: 20),
+                const SizedBox(width: 6),
+                Text(
+                  'Active Secret Links',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                ),
+              ],
+            ),
+            TextButton(
+              onPressed: () => context.push('/disposable_links'),
+              child: Row(
+                children: [
+                  Text('Manage', style: TextStyle(color: theme.colorScheme.secondary, fontWeight: FontWeight.w600)),
+                  Icon(Icons.chevron_right, size: 16, color: theme.colorScheme.secondary),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        allLinksAsync.when(
+          loading: () => Container(
+            height: 90,
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+          error: (_, __) => _buildBannerFallback(context, theme),
+          data: (links) {
+            final activeLinks = links.where((l) => l['status'] == 'ACTIVE').toList();
+            if (activeLinks.isEmpty) {
+              return _buildBannerFallback(context, theme);
+            }
+
+            return SizedBox(
+              height: 105,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: activeLinks.length,
+                itemBuilder: (context, index) {
+                  final link = activeLinks[index];
+                  final name = link['name'] ?? 'Secret Invite Link';
+                  final scans = link['currentScans'];
+                  final maxScans = link['maxScans'];
+
+                  return GestureDetector(
+                    onTap: () => context.push('/disposable_links'),
+                    child: Container(
+                      width: 230,
+                      margin: const EdgeInsets.only(right: 12),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.4), width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF6366F1).withOpacity(0.15),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.12),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.link, color: Color(0xFF00F2FE), size: 14),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  '🟢 Active',
+                                  style: TextStyle(color: Colors.greenAccent, fontSize: 10, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Scans: $scans / ${maxScans ?? "∞"}',
+                                style: const TextStyle(color: Colors.white70, fontSize: 12),
+                              ),
+                              const Icon(Icons.qr_code_2, color: Colors.white70, size: 18),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBannerFallback(BuildContext context, ThemeData theme) {
     return GestureDetector(
       onTap: () => context.push('/disposable_links'),
       child: Container(
