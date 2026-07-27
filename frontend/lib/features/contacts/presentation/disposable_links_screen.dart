@@ -6,9 +6,9 @@ import 'package:share_plus/share_plus.dart';
 import '../../../core/api_client.dart';
 import '../../../core/widgets/premium_button.dart';
 
-final activeLinksProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+final allLinksProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
   final dio = ref.read(dioProvider);
-  final response = await dio.get('/links/active');
+  final response = await dio.get('/links/all');
   return response.data as List<dynamic>;
 });
 
@@ -76,7 +76,7 @@ class _DisposableLinksScreenState extends ConsumerState<DisposableLinksScreen> w
         _allowCalls = true;
       });
 
-      ref.invalidate(activeLinksProvider);
+      ref.invalidate(allLinksProvider);
       
       // Auto-switch to generated dialog
       _showGeneratedLinkDialog(response.data);
@@ -201,7 +201,7 @@ class _DisposableLinksScreenState extends ConsumerState<DisposableLinksScreen> w
     try {
       final dio = ref.read(dioProvider);
       await dio.delete('/links/$linkId');
-      ref.invalidate(activeLinksProvider);
+      ref.invalidate(allLinksProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Invite link revoked')),
@@ -211,6 +211,25 @@ class _DisposableLinksScreenState extends ConsumerState<DisposableLinksScreen> w
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to revoke link: $e')),
+        );
+      }
+    }
+  }
+
+  void _reactivateLink(String linkId) async {
+    try {
+      final dio = ref.read(dioProvider);
+      await dio.post('/links/reactivate/$linkId', data: {'extensionMinutes': 60});
+      ref.invalidate(allLinksProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('⚡ Link reactivated & extended for 60 minutes!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to reactivate link: $e')),
         );
       }
     }
@@ -232,7 +251,7 @@ class _DisposableLinksScreenState extends ConsumerState<DisposableLinksScreen> w
           unselectedLabelColor: Colors.grey,
           tabs: const [
             Tab(text: 'Create Link'),
-            Tab(text: 'Active Links'),
+            Tab(text: 'All My Links'),
           ],
         ),
       ),
@@ -241,128 +260,129 @@ class _DisposableLinksScreenState extends ConsumerState<DisposableLinksScreen> w
         children: [
           // Tab 1: Create Link Form
           SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(20),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Create an expiring contact link to share privately with buyers, tables, or temporary meetings.',
-                  style: TextStyle(color: isDark ? Colors.white70 : Colors.grey, height: 1.4, fontSize: 14),
-                ),
-                const SizedBox(height: 24),
-
-                // Grouped Card Form Inputs
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: theme.cardColor,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
-                      width: 1.0,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      // Link Name
-                      TextField(
-                        controller: _nameController,
-                        style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                        decoration: const InputDecoration(
-                          labelText: 'Contact Name (e.g. Marketplace Buyer)',
-                          prefixIcon: Icon(Icons.label_outline),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Expiration time dropdown
-                      DropdownButtonFormField<int>(
-                        value: _expiresInMinutes,
-                        dropdownColor: theme.cardColor,
-                        style: TextStyle(color: isDark ? Colors.white : Colors.black87),
-                        decoration: const InputDecoration(
-                          labelText: 'Expires In',
-                          prefixIcon: Icon(Icons.timer_outlined),
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: 15, child: Text('15 Minutes')),
-                          DropdownMenuItem(value: 60, child: Text('1 Hour')),
-                          DropdownMenuItem(value: 360, child: Text('6 Hours')),
-                          DropdownMenuItem(value: 1440, child: Text('24 Hours')),
-                          DropdownMenuItem(value: 10080, child: Text('7 Days')),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) setState(() => _expiresInMinutes = val);
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Max Uses dropdown
-                      DropdownButtonFormField<int?>(
-                        value: _maxScans,
-                        dropdownColor: theme.cardColor,
-                        style: TextStyle(color: isDark ? Colors.white : Colors.black87),
-                        decoration: const InputDecoration(
-                          labelText: 'Maximum Uses (Scans)',
-                          prefixIcon: Icon(Icons.people_outline),
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: 1, child: Text('1 Scan')),
-                          DropdownMenuItem(value: 5, child: Text('5 Scans')),
-                          DropdownMenuItem(value: 10, child: Text('10 Scans')),
-                          DropdownMenuItem(value: null, child: Text('Unlimited')),
-                        ],
-                        onChanged: (val) {
-                          setState(() => _maxScans = val);
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      // PIN Code Input
-                      TextField(
-                        controller: _pinController,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                        maxLength: 4,
-                        style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                        decoration: const InputDecoration(
-                          labelText: 'Optional PIN Code (4 Digits)',
-                          prefixIcon: Icon(Icons.lock_outline),
-                          counterText: '',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Actions Allowed Panel
-                Text(
-                  'Allowed Actions',
+                  'Generate Secret Disposable Link',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: isDark ? Colors.white : const Color(0xFF0F172A),
                   ),
                 ),
-                const SizedBox(height: 12),
-                
-                // Selectable custom option cards (Replaces generic CheckboxListTile)
+                const SizedBox(height: 6),
+                Text(
+                  'Create temporary links to let contacts message or call you without exposing your permanent identity.',
+                  style: TextStyle(color: isDark ? Colors.white60 : Colors.grey, fontSize: 13, height: 1.4),
+                ),
+                const SizedBox(height: 24),
+
+                // Link Name (Optional)
+                TextField(
+                  controller: _nameController,
+                  decoration: InputDecoration(
+                    labelText: 'Link Title / Note (Optional)',
+                    hintText: 'e.g., Temporary Work Contact, Marketplace Seller',
+                    prefixIcon: const Icon(Icons.label_outline),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Expiration Picker
+                Text(
+                  'Link Duration',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isDark ? Colors.white70 : Colors.black87),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [15, 60, 1440, 4320].map((mins) {
+                    final label = mins == 15
+                        ? '15 Mins'
+                        : mins == 60
+                            ? '1 Hour'
+                            : mins == 1440
+                                ? '1 Day'
+                                : '3 Days';
+                    final isSelected = _expiresInMinutes == mins;
+                    return ChoiceChip(
+                      label: Text(label),
+                      selected: isSelected,
+                      onSelected: (val) => setState(() => _expiresInMinutes = mins),
+                      selectedColor: theme.colorScheme.secondary.withOpacity(0.2),
+                      labelStyle: TextStyle(
+                        color: isSelected ? theme.colorScheme.secondary : (isDark ? Colors.white70 : Colors.black87),
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 20),
+
+                // Usage Limits (Max Scans)
+                Text(
+                  'Max Uses / Scans',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isDark ? Colors.white70 : Colors.black87),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [1, 5, 10, null].map((limit) {
+                    final label = limit == null ? 'Unlimited' : '$limit ${limit == 1 ? "Scan" : "Scans"}';
+                    final isSelected = _maxScans == limit;
+                    return ChoiceChip(
+                      label: Text(label),
+                      selected: isSelected,
+                      onSelected: (val) => setState(() => _maxScans = limit),
+                      selectedColor: theme.colorScheme.secondary.withOpacity(0.2),
+                      labelStyle: TextStyle(
+                        color: isSelected ? theme.colorScheme.secondary : (isDark ? Colors.white70 : Colors.black87),
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 20),
+
+                // PIN Protection (Optional)
+                TextField(
+                  controller: _pinController,
+                  keyboardType: TextInputType.number,
+                  obscureText: true,
+                  maxLength: 6,
+                  decoration: InputDecoration(
+                    labelText: 'Protection PIN Code (Optional)',
+                    hintText: 'e.g., 1234',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Allowed Actions Selection
+                Text(
+                  'Allowed Communication Permissions',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isDark ? Colors.white70 : Colors.black87),
+                ),
+                const SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(
                       child: _buildActionSelectionCard(
                         icon: Icons.chat_bubble_outline,
-                        title: 'Allow Chat',
+                        title: 'Direct Chat',
                         isSelected: _allowChat,
                         onTap: () => setState(() => _allowChat = !_allowChat),
                         theme: theme,
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: _buildActionSelectionCard(
-                        icon: Icons.videocam_outlined,
-                        title: 'Allow Calls',
+                        icon: Icons.phone_outlined,
+                        title: 'Voice Calling',
                         isSelected: _allowCalls,
                         onTap: () => setState(() => _allowCalls = !_allowCalls),
                         theme: theme,
@@ -372,24 +392,26 @@ class _DisposableLinksScreenState extends ConsumerState<DisposableLinksScreen> w
                 ),
                 const SizedBox(height: 32),
 
+                // Create Button
                 PremiumButton(
                   onPressed: _isCreating ? null : _createLink,
                   child: _isCreating
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Text('Generate Contact Link'),
+                      : const Text('Generate Secret Link'),
                 ),
+                const SizedBox(height: 40),
               ],
             ),
           ),
 
-          // Tab 2: Active Links List
+          // Tab 2: All My Links List (Active, Expired, Revoked with Reactivate Button)
           Consumer(
             builder: (context, ref, child) {
-              final activeLinksAsync = ref.watch(activeLinksProvider);
+              final allLinksAsync = ref.watch(allLinksProvider);
 
-              return activeLinksAsync.when(
+              return allLinksAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, stack) => Center(child: Text('Failed to load active links: $err')),
+                error: (err, stack) => Center(child: Text('Failed to load links: $err')),
                 data: (links) {
                   if (links.isEmpty) {
                     return Center(
@@ -399,7 +421,7 @@ class _DisposableLinksScreenState extends ConsumerState<DisposableLinksScreen> w
                           Icon(Icons.link_off, size: 64, color: theme.dividerColor.withOpacity(0.3)),
                           const SizedBox(height: 16),
                           Text(
-                            'No active temporary links',
+                            'No temporary links created yet',
                             style: TextStyle(
                               color: isDark ? Colors.white38 : Colors.grey,
                               fontWeight: FontWeight.bold,
@@ -415,50 +437,106 @@ class _DisposableLinksScreenState extends ConsumerState<DisposableLinksScreen> w
                     itemCount: links.length,
                     itemBuilder: (context, index) {
                       final link = links[index];
+                      final String id = link['id'];
                       final String name = link['name'] ?? 'Temporary Invite';
                       final int scans = link['currentScans'];
                       final int? max = link['maxScans'];
+                      final String status = link['status'] ?? 'ACTIVE';
                       final String expires = link['expiresAt'] != null
                           ? DateTime.parse(link['expiresAt']).toLocal().toString().substring(0, 16)
                           : 'Never';
 
+                      final isActive = status == 'ACTIVE';
+                      final isExpired = status == 'EXPIRED';
+
                       return HoverLinkCard(
-                        child: Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                  const SizedBox(height: 6),
-                                  Text('Scans: $scans / ${max ?? "∞"}', style: const TextStyle(fontSize: 13, color: Colors.grey)),
-                                  const SizedBox(height: 2),
-                                  Text('Expires: $expires', style: const TextStyle(fontSize: 13, color: Colors.grey)),
-                                  if (link['password'] != null) ...[
-                                    const SizedBox(height: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: Colors.orange.withOpacity(0.12),
-                                        borderRadius: BorderRadius.circular(6),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                            decoration: BoxDecoration(
+                                              color: isActive
+                                                  ? Colors.green.withOpacity(0.12)
+                                                  : (isExpired
+                                                      ? Colors.red.withOpacity(0.12)
+                                                      : Colors.grey.withOpacity(0.12)),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              isActive ? '🟢 Active' : (isExpired ? '🔴 Expired' : '⛔ Revoked'),
+                                              style: TextStyle(
+                                                color: isActive ? Colors.green : (isExpired ? Colors.redAccent : Colors.grey),
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      child: Text(
-                                        'PIN Locked: ${link['password']}',
-                                        style: const TextStyle(color: Colors.orange, fontSize: 11, fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                  ],
+                                      const SizedBox(height: 6),
+                                      Text('Scans: $scans / ${max ?? "∞"}', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                                      const SizedBox(height: 2),
+                                      Text('Expires: $expires', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                                      if (link['password'] != null) ...[
+                                        const SizedBox(height: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange.withOpacity(0.12),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            'PIN Locked: ${link['password']}',
+                                            style: const TextStyle(color: Colors.orange, fontSize: 11, fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                if (isActive) ...[
+                                  IconButton(
+                                    icon: const Icon(Icons.qr_code, color: Color(0xFF6366F1)),
+                                    onPressed: () => _showGeneratedLinkDialog(link),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                    onPressed: () => _revokeLink(id),
+                                  ),
                                 ],
+                              ],
+                            ),
+                            if (!isActive) ...[
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF6366F1),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                  ),
+                                  icon: const Icon(Icons.bolt, color: Colors.white, size: 18),
+                                  label: const Text(
+                                    '⚡ Reactivate & Extend (60 Mins)',
+                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                  ),
+                                  onPressed: () => _reactivateLink(id),
+                                ),
                               ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.qr_code),
-                              onPressed: () => _showGeneratedLinkDialog(link),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                              onPressed: () => _revokeLink(link['id']),
-                            ),
+                            ],
                           ],
                         ),
                       );

@@ -33,6 +33,23 @@ export class LinksController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('all')
+  async getAllLinks(@Req() req: any) {
+    return this.linksService.getAllLinks(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('reactivate/:id')
+  @HttpCode(HttpStatus.OK)
+  async reactivateLink(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body('extensionMinutes') extensionMinutes?: number,
+  ) {
+    return this.linksService.reactivateLink(req.user.userId, id, extensionMinutes);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   async revokeLink(@Req() req: any, @Param('id') id: string) {
     return this.linksService.revokeLink(req.user.userId, id);

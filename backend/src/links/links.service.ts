@@ -54,6 +54,45 @@ export class LinksService {
     });
   }
 
+  async getAllLinks(ownerId: string) {
+    await this.cleanupExpiredLinks();
+
+    return this.prisma.temporaryLink.findMany({
+      where: {
+        ownerId,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  async reactivateLink(ownerId: string, linkId: string, extensionMinutes: number = 60) {
+    const link = await this.prisma.temporaryLink.findUnique({
+      where: { id: linkId },
+    });
+
+    if (!link) {
+      throw new NotFoundException('Link not found');
+    }
+
+    if (link.ownerId !== ownerId) {
+      throw new ForbiddenException('Cannot reactivate other user\'s link');
+    }
+
+    const newExpiresAt = new Date();
+    newExpiresAt.setMinutes(newExpiresAt.getMinutes() + (extensionMinutes || 60));
+
+    return this.prisma.temporaryLink.update({
+      where: { id: linkId },
+      data: {
+        status: 'ACTIVE',
+        expiresAt: newExpiresAt,
+        currentScans: 0, // Reset scans count so link is fresh
+      },
+    });
+  }
+
   async revokeLink(ownerId: string, linkId: string) {
     const link = await this.prisma.temporaryLink.findUnique({
       where: { id: linkId },
