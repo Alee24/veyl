@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -11,6 +12,8 @@ class CallService {
   /// Returns true if both are granted (or already granted).
   /// Shows a settings dialog if permanently denied.
   Future<bool> requestCallPermissions(BuildContext context) async {
+    if (kIsWeb) return true;
+
     // Check current status first
     final cameraStatus = await Permission.camera.status;
     final micStatus = await Permission.microphone.status;
@@ -88,6 +91,7 @@ class CallService {
 
   /// Requests microphone-only permission (for voice-only calls).
   Future<bool> requestMicPermission(BuildContext context) async {
+    if (kIsWeb) return true;
     final status = await Permission.microphone.status;
     if (status.isGranted) return true;
 

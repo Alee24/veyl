@@ -240,6 +240,15 @@ class _ActiveCallScreenState extends ConsumerState<ActiveCallScreen> with Single
       body: SafeArea(
         child: Stack(
           children: [
+            // Offscreen Remote Stream Renderer (Ensures HTML Audio/Video binding on Web & Mobile)
+            Positioned(
+              width: 1,
+              height: 1,
+              left: -100,
+              top: -100,
+              child: RTCVideoView(_remoteRenderer),
+            ),
+
             // ─── Remote Stream / Audio Profile Visualizer ─────────────────────
             if (widget.isVideo && _isConnected && !_isVideoMuted)
               Positioned.fill(

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/api_client.dart';
 import '../../chat/chat_provider.dart';
+import '../../auth/auth_provider.dart';
 import '../../../core/widgets/premium_button.dart';
 import '../../../core/widgets/ambient_background.dart';
 
@@ -67,6 +68,11 @@ class _ClaimLinkScreenState extends ConsumerState<ClaimLinkScreen> {
     setState(() => _isClaiming = true);
 
     try {
+      final authState = ref.read(authStateProvider);
+      if (!authState) {
+        await ref.read(authProvider).guestLogin();
+      }
+
       final dio = ref.read(dioProvider);
       final response = await dio.post(
         '/links/claim/${widget.token}',

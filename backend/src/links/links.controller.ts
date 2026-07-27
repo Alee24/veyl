@@ -1,10 +1,14 @@
 import { Controller, Get, Post, Delete, Body, Param, UseGuards, Req, Query, HttpCode, HttpStatus } from '@nestjs/common';
 import { LinksService } from './links.service';
+import { UsersService } from '../users/users.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('links')
 export class LinksController {
-  constructor(private readonly linksService: LinksService) {}
+  constructor(
+    private readonly linksService: LinksService,
+    private readonly usersService: UsersService,
+  ) {}
 
   @UseGuards(JwtAuthGuard)
   @Post('create')
@@ -39,14 +43,18 @@ export class LinksController {
     return this.linksService.verifyToken(token);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Post('claim/:token')
   @HttpCode(HttpStatus.OK)
   async claimToken(
     @Req() req: any,
     @Param('token') token: string,
-    @Body() body: { password?: string },
+    @Body() body: { password?: string; userId?: string },
   ) {
-    return this.linksService.claimToken(token, req.user.userId, body.password);
+    let userId = req.user?.userId || req.user?.sub || body.userId;
+    if (!userId) {
+      const guest = await this.usersService.createGuest();
+      userId = guest.id;
+    }
+    return this.linksService.claimToken(token, userId, body.password);
   }
 }
