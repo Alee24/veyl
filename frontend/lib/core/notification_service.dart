@@ -8,11 +8,14 @@ class NotificationService {
   /// Plays a futuristic chime sound and triggers haptic vibration for incoming messages
   static Future<void> playMessageAlert(BuildContext? context, {required String title, required String body}) async {
     try {
-      // 1. Play Futuristic Notification sound
       await _audioPlayer.stop();
-      await _audioPlayer.play(AssetSource('audio/futuristic_notification.wav'));
+      try {
+        await _audioPlayer.play(AssetSource('audio/futuristic_notification.wav'));
+      } catch (_) {
+        await _audioPlayer.play(UrlSource('https://assets.mixkit.co/active_storage/sfx/2874/2874-84.wav'));
+      }
     } catch (e) {
-      // Fallback
+      debugPrint('Failed to play notification chime: $e');
     }
 
     // 2. Trigger Haptic Vibration

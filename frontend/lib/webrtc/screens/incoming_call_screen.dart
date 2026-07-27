@@ -63,7 +63,7 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen> with Si
       try {
         await _audioPlayer.play(AssetSource('audio/futuristic_ringtone.wav'));
       } catch (_) {
-        await _audioPlayer.play(UrlSource('https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav'));
+        await _audioPlayer.play(UrlSource('https://assets.mixkit.co/active_storage/sfx/2869/2869-84.wav'));
       }
     } catch (e) {
       debugPrint('Error playing ringtone: $e');

@@ -83,7 +83,7 @@ class _OutgoingCallScreenState extends ConsumerState<OutgoingCallScreen> {
       try {
         await _audioPlayer.play(AssetSource('audio/futuristic_outgoing.wav'));
       } catch (_) {
-        await _audioPlayer.play(UrlSource('https://assets.mixkit.co/active_storage/sfx/903/903-84.wav'));
+        await _audioPlayer.play(UrlSource('https://assets.mixkit.co/active_storage/sfx/1004/1004-84.wav'));
       }
     } catch (e) {
       debugPrint('Failed to play calling ringback sound: $e');
