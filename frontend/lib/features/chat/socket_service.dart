@@ -43,6 +43,9 @@ class SocketService {
   final StreamController<Map<String, dynamic>> _callEndedController = StreamController.broadcast();
   Stream<Map<String, dynamic>> get onCallEnded => _callEndedController.stream;
 
+  final StreamController<Map<String, dynamic>> _roomEventController = StreamController.broadcast();
+  Stream<Map<String, dynamic>> get onRoomEvent => _roomEventController.stream;
+
   SocketService(this._ref);
 
   IO.Socket? get socket => _socket;
@@ -116,6 +119,18 @@ class SocketService {
     _socket!.on('call_ended', (data) {
       _callEndedController.add(Map<String, dynamic>.from(data));
     });
+
+    _socket!.on('room_event', (data) {
+      _roomEventController.add(Map<String, dynamic>.from(data));
+    });
+  }
+
+  void joinLiveRoom(String roomId, Map<String, dynamic> user) {
+    _socket?.emit('join_room_live', {'roomId': roomId, 'user': user});
+  }
+
+  void emitRoomActivity(String roomId, Map<String, dynamic> activity) {
+    _socket?.emit('room_activity_broadcast', {'roomId': roomId, 'activity': activity});
   }
 
   void joinChat(String chatId) {
