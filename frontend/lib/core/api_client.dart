@@ -47,8 +47,30 @@ final dioProvider = Provider<Dio>((ref) {
       return handler.next(options);
     },
     onError: (DioException e, handler) async {
-      if (e.response?.statusCode == 401) {
-        // Implement token refresh logic here
+      if (e.response?.statusCode == 401 &&
+          e.requestOptions.path != '/auth/guest' &&
+          e.requestOptions.path != '/auth/login') {
+        try {
+          final refreshDio = Dio(BaseOptions(baseUrl: getBaseUrl()));
+          final response = await refreshDio.post('/auth/guest');
+          final data = response.data;
+          final newToken = data['accessToken'];
+
+          if (newToken != null && newToken.toString().isNotEmpty) {
+            try {
+              await storage.write(key: 'accessToken', value: newToken);
+            } catch (_) {}
+            try {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setString('accessToken', newToken);
+            } catch (_) {}
+
+            final options = e.requestOptions;
+            options.headers['Authorization'] = 'Bearer $newToken';
+            final retryResponse = await refreshDio.fetch(options);
+            return handler.resolve(retryResponse);
+          }
+        } catch (_) {}
       }
       return handler.next(e);
     },

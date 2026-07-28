@@ -76,7 +76,13 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
 
     try {
       final dio = ref.read(dioProvider);
-      final response = await dio.post('/links/create', data: payload);
+      dynamic response;
+      try {
+        response = await dio.post('/links/create', data: payload);
+      } catch (_) {
+        await ref.read(authProvider).guestLogin();
+        response = await dio.post('/links/create', data: payload);
+      }
 
       setState(() {
         _nameController.clear();
@@ -92,7 +98,7 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('Failed to generate invite link. Please try again.'),
             backgroundColor: Colors.redAccent,
           ),

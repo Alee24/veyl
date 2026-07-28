@@ -6,6 +6,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../core/api_client.dart';
 import '../../../core/widgets/premium_button.dart';
+import '../../auth/auth_provider.dart';
 
 final allLinksProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
   final dio = ref.read(dioProvider);
@@ -66,8 +67,14 @@ class _DisposableLinksScreenState extends ConsumerState<DisposableLinksScreen> w
 
     try {
       final dio = ref.read(dioProvider);
-      final response = await dio.post('/links/create', data: payload);
-      
+      dynamic response;
+      try {
+        response = await dio.post('/links/create', data: payload);
+      } catch (_) {
+        await ref.read(authProvider).guestLogin();
+        response = await dio.post('/links/create', data: payload);
+      }
+
       setState(() {
         _nameController.clear();
         _pinController.clear();
@@ -78,13 +85,15 @@ class _DisposableLinksScreenState extends ConsumerState<DisposableLinksScreen> w
       });
 
       ref.invalidate(allLinksProvider);
-      
-      // Auto-switch to generated dialog
+
       _showGeneratedLinkDialog(response.data);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to generate invite: $e')),
+          const SnackBar(
+            content: Text('Unable to generate invite link. Please try again.'),
+            backgroundColor: Colors.redAccent,
+          ),
         );
       }
     } finally {
