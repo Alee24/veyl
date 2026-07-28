@@ -1,6 +1,8 @@
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/api_client.dart';
+import '../auth/auth_provider.dart';
 import 'dart:async';
 
 final socketServiceProvider = Provider((ref) {
@@ -52,7 +54,25 @@ class SocketService {
 
   Future<void> connect() async {
     final storage = _ref.read(secureStorageProvider);
-    final token = await storage.read(key: 'accessToken');
+    String? token;
+    try {
+      token = await storage.read(key: 'accessToken');
+    } catch (_) {}
+
+    if (token == null || token.isEmpty) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        token = prefs.getString('accessToken');
+      } catch (_) {}
+    }
+
+    if (token == null || token.isEmpty) {
+      try {
+        await _ref.read(authProvider).guestLogin();
+        final prefs = await SharedPreferences.getInstance();
+        token = prefs.getString('accessToken');
+      } catch (_) {}
+    }
 
     if (_socket != null && _socket!.connected) {
       return;
@@ -77,6 +97,23 @@ class SocketService {
 
     _socket!.onConnect((_) {
       print('⚡ Connected to Socket.IO signaling server');
+    });
+
+    _socket!.onConnectError((err) async {
+      print('⚠️ Socket connection error: $err. Re-authenticating guest...');
+      try {
+        await _ref.read(authProvider).guestLogin();
+        final prefs = await SharedPreferences.getInstance();
+        final newToken = prefs.getString('accessToken');
+        if (newToken != null && newToken.isNotEmpty && _socket != null) {
+          _socket!.io.options?['auth'] = {'token': newToken};
+          _socket!.connect();
+        }
+      } catch (_) {}
+    });
+
+    _socket!.onDisconnect((_) {
+      print('⚡ Socket disconnected, auto-reconnecting...');
     });
 
     _socket!.on('new_message', (data) {

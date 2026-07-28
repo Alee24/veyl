@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 import 'core/router.dart';
 import 'core/theme.dart';
 import 'features/auth/auth_provider.dart';
-
-import 'package:shared_preferences/shared_preferences.dart';
+import 'features/chat/socket_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,11 +43,44 @@ void main() async {
   );
 }
 
-class VeylApp extends ConsumerWidget {
+class VeylApp extends ConsumerStatefulWidget {
   const VeylApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<VeylApp> createState() => _VeylAppState();
+}
+
+class _VeylAppState extends ConsumerState<VeylApp> {
+  StreamSubscription? _callIncomingSub;
+  bool _isCallScreenOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final socketService = ref.read(socketServiceProvider);
+      await socketService.connect();
+
+      _callIncomingSub = socketService.onCallIncoming.listen((data) {
+        if (!_isCallScreenOpen) {
+          _isCallScreenOpen = true;
+          final router = ref.read(routerProvider);
+          router.push('/incoming_call', extra: data).then((_) {
+            _isCallScreenOpen = false;
+          });
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _callIncomingSub?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
     return MaterialApp.router(
