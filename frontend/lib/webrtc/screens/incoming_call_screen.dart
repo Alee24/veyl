@@ -69,8 +69,11 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen> with Si
       debugPrint('Error playing ringtone: $e');
     }
 
-    _vibrationTimer = Timer.periodic(const Duration(milliseconds: 700), (_) {
-      HapticFeedback.vibrate();
+    _vibrationTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+      try {
+        HapticFeedback.vibrate();
+        HapticFeedback.heavyImpact();
+      } catch (_) {}
     });
   }
 
@@ -95,6 +98,7 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen> with Si
   }
 
   void _acceptCall() async {
+    _stopRingingAndVibration();
     final callService = ref.read(callServiceProvider);
     final isVideo = widget.roomName.startsWith('video');
 
@@ -104,7 +108,6 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen> with Si
     if (!hasPermission) return;
 
     ref.read(socketServiceProvider).acceptCall(widget.callerId);
-    _stopRingingAndVibration();
 
     if (mounted) {
       context.pushReplacement(

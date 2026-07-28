@@ -27,6 +27,8 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
   Timer? _connectivityTimer;
   bool _hasInternet = true;
 
+  bool _isIncomingCallScreenOpen = false;
+
   @override
   void initState() {
     super.initState();
@@ -39,8 +41,11 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
       await socketService.connect();
 
       _incomingCallSub = socketService.onCallIncoming.listen((data) {
-        if (mounted) {
-          context.push('/incoming_call', extra: data);
+        if (mounted && !_isIncomingCallScreenOpen) {
+          _isIncomingCallScreenOpen = true;
+          context.push('/incoming_call', extra: data).then((_) {
+            _isIncomingCallScreenOpen = false;
+          });
         }
       });
 

@@ -18,9 +18,10 @@ class NotificationService {
       debugPrint('Failed to play notification chime: $e');
     }
 
-    // 2. Trigger Haptic Vibration
+    // 2. Trigger Haptic System Vibration
     try {
       HapticFeedback.vibrate();
+      HapticFeedback.heavyImpact();
     } catch (_) {}
 
     // 3. Show floating toast notification if context is provided

@@ -299,8 +299,8 @@ class _CallsScreenState extends ConsumerState<CallsScreen> with SingleTickerProv
               text: 'Users Directory',
             ),
             Tab(
-              icon: Icon(Icons.meeting_room_outlined, size: 18),
-              text: 'Breakout Rooms',
+              icon: Icon(Icons.podcasts_outlined, size: 18),
+              text: 'My Lives',
             ),
           ],
         ),
@@ -445,13 +445,13 @@ class _CallsScreenState extends ConsumerState<CallsScreen> with SingleTickerProv
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Voice Breakout Rooms',
+                        'My Lives Broadcast Studio',
                         style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                       SizedBox(height: 3),
                       Text(
-                        'Launch a conference room. Only the presenter broadcasts audio. Others join to listen live.',
-                        style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.45),
+                        'Host live audio podcasts or interactive broadcast rooms. Anyone with the room ID or link can join or listen live.',
+                        style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
                       ),
                     ],
                   ),
@@ -461,7 +461,7 @@ class _CallsScreenState extends ConsumerState<CallsScreen> with SingleTickerProv
           ),
           const SizedBox(height: 24),
 
-          // Create Breakout Room Form Card
+          // Create My Lives Room Form Card
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -476,7 +476,7 @@ class _CallsScreenState extends ConsumerState<CallsScreen> with SingleTickerProv
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Create Breakout Room',
+                  'Host a New Live Room',
                   style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
@@ -484,9 +484,9 @@ class _CallsScreenState extends ConsumerState<CallsScreen> with SingleTickerProv
                   controller: _roomNameController,
                   style: TextStyle(color: isDark ? Colors.white : Colors.black),
                   decoration: const InputDecoration(
-                    labelText: 'Breakout Room Title',
-                    prefixIcon: Icon(Icons.meeting_room_outlined),
-                    hintText: 'e.g. Weekly Cryptography Talk',
+                    labelText: 'Live Room / Podcast Title',
+                    prefixIcon: Icon(Icons.podcasts_outlined),
+                    hintText: 'e.g., Late Night Talk, Tech Discussion',
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -495,12 +495,12 @@ class _CallsScreenState extends ConsumerState<CallsScreen> with SingleTickerProv
                   dropdownColor: theme.cardColor,
                   style: TextStyle(color: isDark ? Colors.white : Colors.black87),
                   decoration: const InputDecoration(
-                    labelText: 'Breakout Space Type',
-                    prefixIcon: Icon(Icons.security_outlined),
+                    labelText: 'Live Room Type',
+                    prefixIcon: Icon(Icons.category_outlined),
                   ),
                   items: const [
-                    DropdownMenuItem(value: 'TEMPORARY', child: Text('Temporary Breakout (Auto-expiring)')),
-                    DropdownMenuItem(value: 'PERMANENT', child: Text('Permanent Channels')),
+                    DropdownMenuItem(value: 'TEMPORARY', child: Text('Temporary Live (Auto-expiring)')),
+                    DropdownMenuItem(value: 'PERMANENT', child: Text('Permanent Live Channel')),
                   ],
                   onChanged: (val) {
                     if (val != null) setState(() => _roomType = val);
@@ -541,7 +541,7 @@ class _CallsScreenState extends ConsumerState<CallsScreen> with SingleTickerProv
                           children: [
                             Icon(Icons.add, color: Colors.white, size: 18),
                             SizedBox(width: 8),
-                            Text('Generate Breakout Space'),
+                            Text('Generate Live Space'),
                           ],
                         ),
                 ),
@@ -609,7 +609,7 @@ class _CallsScreenState extends ConsumerState<CallsScreen> with SingleTickerProv
 
           // Active Podcast Rooms Directory
           Text(
-            'Live Active Breakout Rooms',
+            'Live Broadcasts (My Lives)',
             style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
