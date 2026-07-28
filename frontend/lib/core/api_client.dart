@@ -48,8 +48,8 @@ final dioProvider = Provider<Dio>((ref) {
     },
     onError: (DioException e, handler) async {
       if (e.response?.statusCode == 401 &&
-          e.requestOptions.path != '/auth/guest' &&
-          e.requestOptions.path != '/auth/login') {
+          !e.requestOptions.path.contains('/auth/guest') &&
+          !e.requestOptions.path.contains('/auth/login')) {
         try {
           final refreshDio = Dio(BaseOptions(baseUrl: getBaseUrl()));
           final response = await refreshDio.post('/auth/guest');
@@ -57,17 +57,28 @@ final dioProvider = Provider<Dio>((ref) {
           final newToken = data['accessToken'];
 
           if (newToken != null && newToken.toString().isNotEmpty) {
+            final tokenStr = newToken.toString();
             try {
-              await storage.write(key: 'accessToken', value: newToken);
+              await storage.write(key: 'accessToken', value: tokenStr);
             } catch (_) {}
             try {
               final prefs = await SharedPreferences.getInstance();
-              await prefs.setString('accessToken', newToken);
+              await prefs.setString('accessToken', tokenStr);
             } catch (_) {}
 
-            final options = e.requestOptions;
-            options.headers['Authorization'] = 'Bearer $newToken';
-            final retryResponse = await refreshDio.fetch(options);
+            final requestOptions = e.requestOptions;
+            requestOptions.headers['Authorization'] = 'Bearer $tokenStr';
+
+            final retryDio = Dio(BaseOptions(baseUrl: getBaseUrl()));
+            final retryResponse = await retryDio.request(
+              requestOptions.path,
+              data: requestOptions.data,
+              queryParameters: requestOptions.queryParameters,
+              options: Options(
+                method: requestOptions.method,
+                headers: requestOptions.headers,
+              ),
+            );
             return handler.resolve(retryResponse);
           }
         } catch (_) {}

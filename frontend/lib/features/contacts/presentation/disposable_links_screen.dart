@@ -10,8 +10,18 @@ import '../../auth/auth_provider.dart';
 
 final allLinksProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
   final dio = ref.read(dioProvider);
-  final response = await dio.get('/links/all');
-  return response.data as List<dynamic>;
+  try {
+    final response = await dio.get('/links/all');
+    return response.data as List<dynamic>;
+  } catch (e) {
+    try {
+      await ref.read(authProvider).guestLogin();
+      final retryResponse = await dio.get('/links/all');
+      return retryResponse.data as List<dynamic>;
+    } catch (_) {
+      return <dynamic>[];
+    }
+  }
 });
 
 class DisposableLinksScreen extends ConsumerStatefulWidget {
@@ -421,7 +431,36 @@ class _DisposableLinksScreenState extends ConsumerState<DisposableLinksScreen> w
 
               return allLinksAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, stack) => Center(child: Text('Failed to load links: $err')),
+                error: (err, stack) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.refresh_outlined, size: 56, color: theme.colorScheme.secondary),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Could not load links at this time.',
+                          style: TextStyle(
+                            color: isDark ? Colors.white70 : Colors.black87,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF6366F1),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                          icon: const Icon(Icons.refresh, color: Colors.white, size: 18),
+                          label: const Text('Tap to Refresh', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          onPressed: () => ref.invalidate(allLinksProvider),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
                 data: (links) {
                   if (links.isEmpty) {
                     return Center(
