@@ -5,6 +5,7 @@ import '../../auth/auth_provider.dart';
 import '../../chat/chat_provider.dart';
 import '../../contacts/presentation/disposable_links_screen.dart';
 import '../../../core/widgets/veyl_logo.dart';
+import '../../../core/theme.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -22,7 +23,7 @@ class HomeScreen extends ConsumerWidget {
     final chatsAsync = ref.watch(userChatsProvider);
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFFAFAFB),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: Colors.transparent,
@@ -45,9 +46,9 @@ class HomeScreen extends ConsumerWidget {
         ),
         actions: [
           _buildAppBarAction(
-            icon: Icons.search,
+            icon: isDark ? Icons.wb_sunny_outlined : Icons.nightlight_round,
             isDark: isDark,
-            onTap: () => context.push('/calls'),
+            onTap: () => AppTheme.showThemeSelectorDialog(context, ref),
           ),
           const SizedBox(width: 8),
           _buildAppBarAction(

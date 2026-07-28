@@ -1,26 +1,59 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.light);
+class ThemeModeNotifier extends StateNotifier<ThemeMode> {
+  ThemeModeNotifier() : super(ThemeMode.light) {
+    _loadTheme();
+  }
+
+  Future<void> _loadTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedMode = prefs.getString('app_theme_mode');
+    if (savedMode == 'dark') {
+      state = ThemeMode.dark;
+    } else if (savedMode == 'system') {
+      state = ThemeMode.system;
+    } else {
+      state = ThemeMode.light;
+    }
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    state = mode;
+    final prefs = await SharedPreferences.getInstance();
+    if (mode == ThemeMode.dark) {
+      await prefs.setString('app_theme_mode', 'dark');
+    } else if (mode == ThemeMode.system) {
+      await prefs.setString('app_theme_mode', 'system');
+    } else {
+      await prefs.setString('app_theme_mode', 'light');
+    }
+  }
+}
+
+final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((ref) {
+  return ThemeModeNotifier();
+});
 
 class AppTheme {
-  // Light Theme Palette
-  static const Color lightBg = Color(0xFFFAFAFB);
+  // Light Theme Palette (Pearl White, Crisp Light Card, Slate Text, Blue/Indigo Accents)
+  static const Color lightBg = Color(0xFFF8FAFC);
   static const Color lightSurface = Color(0xFFFFFFFF);
   static const Color lightPrimary = Color(0xFF0F172A);
-  static const Color lightAccent = Color(0xFF2563EB);
+  static const Color lightAccent = Color(0xFF4F46E5);
   static const Color lightSuccess = Color(0xFF10B981);
   static const Color lightWarning = Color(0xFFF59E0B);
   static const Color lightError = Color(0xFFEF4444);
-  static const Color lightBorder = Color(0xFFE5E7EB);
+  static const Color lightBorder = Color(0xFFE2E8F0);
 
   // Dark Theme Palette (Calm, Premium Slate/Navy)
-  static const Color darkBg = Color(0xFF0B0F19);
-  static const Color darkSurface = Color(0xFF161E2E);
-  static const Color darkPrimary = Color(0xFFF1F5F9);
-  static const Color darkAccent = Color(0xFF3B82F6);
-  static const Color darkBorder = Color(0xFF1E293B);
+  static const Color darkBg = Color(0xFF0F172A);
+  static const Color darkSurface = Color(0xFF1E293B);
+  static const Color darkPrimary = Color(0xFFF8FAFC);
+  static const Color darkAccent = Color(0xFF6366F1);
+  static const Color darkBorder = Color(0xFF334155);
 
   static ThemeData get lightTheme {
     return ThemeData(
@@ -155,6 +188,121 @@ class AppTheme {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+
+  static void showThemeSelectorDialog(BuildContext context, WidgetRef ref) {
+    final currentMode = ref.watch(themeModeProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Text(
+            'Select App Theme',
+            style: TextStyle(
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildThemeOption(
+                context: context,
+                ref: ref,
+                title: 'Light Mode ☀️',
+                subtitle: 'Bright, clean & vibrant interface',
+                mode: ThemeMode.light,
+                currentMode: currentMode,
+              ),
+              const SizedBox(height: 8),
+              _buildThemeOption(
+                context: context,
+                ref: ref,
+                title: 'Dark Mode 🌙',
+                subtitle: 'Sleek midnight dark aesthetic',
+                mode: ThemeMode.dark,
+                currentMode: currentMode,
+              ),
+              const SizedBox(height: 8),
+              _buildThemeOption(
+                context: context,
+                ref: ref,
+                title: 'System Default ⚙️',
+                subtitle: 'Matches your OS device setting',
+                mode: ThemeMode.system,
+                currentMode: currentMode,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  static Widget _buildThemeOption({
+    required BuildContext context,
+    required WidgetRef ref,
+    required String title,
+    required String subtitle,
+    required ThemeMode mode,
+    required ThemeMode currentMode,
+  }) {
+    final isSelected = mode == currentMode;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return InkWell(
+      onTap: () {
+        ref.read(themeModeProvider.notifier).setThemeMode(mode);
+        Navigator.pop(context);
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFF6366F1).withOpacity(0.15)
+              : (isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.03)),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF6366F1) : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: isDark ? Colors.white54 : Colors.black54,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              const Icon(Icons.check_circle, color: Color(0xFF6366F1), size: 20),
+          ],
         ),
       ),
     );

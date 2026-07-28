@@ -61,17 +61,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               theme: theme,
               children: [
                 HoverSettingsTile(
-                  leading: Icon(Icons.palette_outlined, color: theme.colorScheme.secondary),
+                  leading: Icon(
+                    themeMode == ThemeMode.light
+                        ? Icons.wb_sunny_outlined
+                        : (themeMode == ThemeMode.dark ? Icons.nightlight_round : Icons.settings_brightness),
+                    color: const Color(0xFF6366F1),
+                  ),
                   title: Text(
-                    'Theme Mode',
+                    'App Theme Mode',
                     style: TextStyle(
-                      color: isDark ? Colors.white : Colors.black87,
-                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   subtitle: Text(
-                    themeMode == ThemeMode.light ? 'Light Theme' : 'Dark Theme',
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    themeMode == ThemeMode.light
+                        ? '☀️ Light Mode Active'
+                        : (themeMode == ThemeMode.dark ? '🌙 Dark Mode Active' : '⚙️ System Default'),
+                    style: TextStyle(color: theme.colorScheme.secondary, fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                   trailing: DropdownButtonHideUnderline(
                     child: DropdownButton<ThemeMode>(
@@ -79,12 +86,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       dropdownColor: theme.cardColor,
                       onChanged: (mode) {
                         if (mode != null) {
-                          ref.read(themeModeProvider.notifier).state = mode;
+                          ref.read(themeModeProvider.notifier).setThemeMode(mode);
                         }
                       },
                       items: const [
-                        DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
-                        DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
+                        DropdownMenuItem(value: ThemeMode.light, child: Text('☀️ Light')),
+                        DropdownMenuItem(value: ThemeMode.dark, child: Text('🌙 Dark')),
+                        DropdownMenuItem(value: ThemeMode.system, child: Text('⚙️ System')),
                       ],
                     ),
                   ),

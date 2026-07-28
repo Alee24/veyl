@@ -107,17 +107,17 @@ class _UserProfileViewScreenState extends ConsumerState<UserProfileViewScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF0F172A),
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(color: Color(0xFF6366F1)),
-              SizedBox(height: 16),
+              const CircularProgressIndicator(color: Color(0xFF6366F1)),
+              const SizedBox(height: 16),
               Text(
                 'Loading User Account...',
-                style: TextStyle(color: Colors.white70, fontSize: 16),
+                style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontSize: 16),
               ),
             ],
           ),
@@ -133,21 +133,21 @@ class _UserProfileViewScreenState extends ConsumerState<UserProfileViewScreen> {
     final profileUrl = 'https://veyl.kkdes.co.ke/app.html#/user/$username';
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : const Color(0xFF0F172A)),
           onPressed: () => context.pop(),
         ),
-        title: const Text(
+        title: Text(
           'User Account',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.share, color: Colors.white),
+            icon: Icon(Icons.share, color: isDark ? Colors.white : const Color(0xFF0F172A)),
             onPressed: _shareProfile,
           ),
         ],
@@ -163,9 +163,9 @@ class _UserProfileViewScreenState extends ConsumerState<UserProfileViewScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
                 borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: Colors.white.withOpacity(0.08)),
+                border: Border.all(color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFE2E8F0)),
                 boxShadow: [
                   BoxShadow(
                     color: const Color(0xFF6366F1).withOpacity(0.12),
@@ -182,15 +182,15 @@ class _UserProfileViewScreenState extends ConsumerState<UserProfileViewScreen> {
                     children: [
                       Container(
                         padding: const EdgeInsets.all(3),
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           shape: BoxShape.circle,
-                          gradient: const LinearGradient(
+                          gradient: LinearGradient(
                             colors: [Color(0xFF6366F1), Color(0xFFA855F7)],
                           ),
                         ),
                         child: CircleAvatar(
                           radius: 52,
-                          backgroundColor: const Color(0xFF0F172A),
+                          backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
                           backgroundImage: (profilePhotoUrl != null && profilePhotoUrl.isNotEmpty)
                               ? NetworkImage(profilePhotoUrl.startsWith('http') ? profilePhotoUrl : '${getBaseUrl()}$profilePhotoUrl')
                               : NetworkImage('https://api.dicebear.com/7.x/bottts/png?seed=$username') as ImageProvider,
@@ -202,7 +202,7 @@ class _UserProfileViewScreenState extends ConsumerState<UserProfileViewScreen> {
                         decoration: BoxDecoration(
                           color: isOnline ? const Color(0xFF10B981) : Colors.grey,
                           shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFF1E293B), width: 3),
+                          border: Border.all(color: isDark ? const Color(0xFF1E293B) : Colors.white, width: 3),
                         ),
                       ),
                     ],
@@ -211,7 +211,7 @@ class _UserProfileViewScreenState extends ConsumerState<UserProfileViewScreen> {
 
                   Text(
                     displayName,
-                    style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 22, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
                   Text(
