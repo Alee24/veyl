@@ -53,7 +53,19 @@ class _QrScannerScreenState extends ConsumerState<QrScannerScreen> {
         }
       }
 
-      // 3. User Profile / Chat Username: e.g., "https://veyl.kkdes.co.ke/sarah" -> "sarah" or "@sarah"
+      // 3. User Profile Links: e.g. "https://veyl.kkdes.co.ke/app.html#/user/sarah"
+      if (code.contains('/user/')) {
+        final parts = code.split('/user/');
+        if (parts.length > 1) {
+          final username = parts.last.split('?').first.split('#').first;
+          if (mounted) {
+            context.go('/user/$username');
+            return;
+          }
+        }
+      }
+
+      // 4. Raw Username or Profile Link: e.g. "https://veyl.kkdes.co.ke/sarah" or "@sarah"
       String contactUsername = code;
       if (contactUsername.contains('://')) {
         try {
@@ -69,21 +81,10 @@ class _QrScannerScreenState extends ConsumerState<QrScannerScreen> {
         contactUsername = contactUsername.substring(1);
       }
 
-      try {
-        final chatId = await ref.read(chatProvider).createChatByUsername(contactUsername);
+      if (contactUsername.isNotEmpty) {
         if (mounted) {
-          ref.invalidate(userChatsProvider);
-          context.go('/chat/$chatId');
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('User or destination not found')),
-          );
-          await Future.delayed(const Duration(seconds: 2));
-          if (mounted) {
-            setState(() => _isHandlingScan = false);
-          }
+          context.go('/user/$contactUsername');
+          return;
         }
       }
     }

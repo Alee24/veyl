@@ -20,6 +20,7 @@ import '../webrtc/screens/call_history_screen.dart';
 import '../features/contacts/presentation/contacts_screen.dart';
 import '../features/contacts/presentation/disposable_links_screen.dart';
 import '../features/contacts/presentation/claim_link_screen.dart';
+import '../features/profile/presentation/user_profile_view_screen.dart';
 import '../features/nearby/presentation/nearby_screen.dart';
 import 'main_layout.dart';
 
@@ -31,12 +32,18 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final isLoggingIn = state.matchedLocation == '/login' || state.matchedLocation == '/register';
       final isRoomRoute = state.matchedLocation.startsWith('/room/');
+      final isUserRoute = state.matchedLocation.startsWith('/user/');
+      final isClaimRoute = state.matchedLocation.startsWith('/claim/');
       final isCallRoute = state.matchedLocation == '/incoming_call' || state.matchedLocation == '/outgoing_call' || state.matchedLocation == '/active_call';
-      if (!authState && !isLoggingIn && !isRoomRoute && !isCallRoute) return '/login';
+      if (!authState && !isLoggingIn && !isRoomRoute && !isCallRoute && !isUserRoute && !isClaimRoute) return '/login';
       if (authState && isLoggingIn) return '/home';
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/user/:username',
+        builder: (context, state) => UserProfileViewScreen(username: state.pathParameters['username']!),
+      ),
       GoRoute(
         path: '/login',
         builder: (context, state) => const LoginScreen(),

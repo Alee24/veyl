@@ -191,7 +191,7 @@ class ProfileScreen extends ConsumerWidget {
                             ],
                           ),
                           child: QrImageView(
-                            data: 'https://veyl.kkdes.co.ke/$username',
+                            data: 'https://veyl.kkdes.co.ke/app.html#/user/$username',
                             version: QrVersions.auto,
                             size: 160.0,
                             gapless: false,
@@ -205,18 +205,19 @@ class ProfileScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'veyl.kkdes.co.ke/$username',
+                          'veyl.kkdes.co.ke/app.html#/user/$username',
                           style: TextStyle(
                             color: theme.colorScheme.secondary,
                             fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                            fontSize: 13,
                           ),
                         ),
                         const SizedBox(height: 24),
                         PremiumButton(
                           onPressed: () async {
+                            final userProfileUrl = 'https://veyl.kkdes.co.ke/app.html#/user/$username';
                             await Share.share(
-                              'Connect with me on Veyl! Scan my identity or download the app: https://veyl.kkdes.co.ke/',
+                              'Connect with me on Veyl! Scan my identity or open my profile link: $userProfileUrl',
                               subject: 'Veyl Profile Connection',
                             );
                           },
